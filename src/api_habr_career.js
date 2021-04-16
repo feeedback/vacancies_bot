@@ -49,14 +49,16 @@ export const getVacancyByFilterFromRssHabrCareer = async (filterParam, fromDayAg
     await delayMs(1000);
   }
 
-  return vacancies.map(({ title, content, author, isoDate, link, guid }) => ({
-    title,
-    content,
-    author,
-    isoDate,
-    link,
-    guid,
-  }));
+  return vacancies
+    .map(({ title, content, author, isoDate, link, guid }) => ({
+      title,
+      content,
+      author,
+      isoDate,
+      link,
+      guid,
+    }))
+    .filter(({ isoDate }) => dayjs(isoDate).isAfter(dayjs().subtract(fromDayAgo, 'day')));
 };
 
 const TAGS_START_TITLE = 'Требуемые навыки: ';
