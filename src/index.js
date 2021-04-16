@@ -15,22 +15,22 @@ import {
 //   with_salary: 'true',
 // };
 
-const URL_RSS =
-  'https://career.habr.com/vacancies/rss?currency=RUR&divisions[]=apps&divisions[]=software&divisions[]=backend&divisions[]=frontend&salary=40000&skills[]=264&sort=date&type=all&with_salary=1';
+// const URL_RSS =
+//   'https://career.habr.com/vacancies/rss?currency=RUR&divisions[]=apps&divisions[]=software&divisions[]=backend&divisions[]=frontend&salary=40000&skills[]=264&sort=date&type=all&with_salary=1';
 
-const main = async () => {
-  const vacanciesRaw = await getVacancyByFilterFromRssHabrCareer(URL_RSS, 2);
-  const { stringVacancies, topTagsByCount } = await parseFilterFormatVacancies(
+const getRss = async (url, day = 2) => {
+  const vacanciesRaw = await getVacancyByFilterFromRssHabrCareer(url, day);
+  const { stringVacancies } = await parseFilterFormatVacancies(
     vacanciesRaw,
     'RUB',
     vacancyExcludeTags,
     vacancyExcludeWordsInDesc,
     0,
     0,
-    200000
+    250000
   );
-  // console.log(topTagsByCount);
-
-  console.log(stringVacancies);
+  return stringVacancies;
 };
-main();
+// main(URL_RSS);
+
+export default getRss;

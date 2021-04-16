@@ -29,7 +29,7 @@ export const getVacancyByFilterFromRssHabrCareer = async (filterParam, fromDayAg
   const urlRss = new URL(
     `${HABR_CAREER_URL_RSS}?${qs.stringify(filter, { arrayFormat: 'brackets' })}`
   );
-  let vacancyCount = true;
+  let vacancyCount = Infinity;
   let isOlderThanFromDayAgo = false;
   let page = 1;
   const vacancies = [];
@@ -40,13 +40,17 @@ export const getVacancyByFilterFromRssHabrCareer = async (filterParam, fromDayAg
 
     const feed = await rss.parseURL(urlRss.toString());
     vacancyCount = feed.items.length;
-    console.log('Получено:', vacancyCount, feed.title);
-    isOlderThanFromDayAgo = dayjs(feed.items[vacancyCount - 1].isoDate).isBefore(
-      dayjs().subtract(fromDayAgo, 'day')
-    );
-    vacancies.push(...feed.items);
-    page += 1;
-    await delayMs(1000);
+
+    if (feed.items.length) {
+      console.log('Получено:', vacancyCount, feed.title);
+      isOlderThanFromDayAgo = dayjs(feed.items[vacancyCount - 1].isoDate).isBefore(
+        dayjs().subtract(fromDayAgo, 'day')
+      );
+      vacancies.push(...feed.items);
+      page += 1;
+    }
+
+    await delayMs(2000);
   }
 
   return vacancies
@@ -62,13 +66,14 @@ export const getVacancyByFilterFromRssHabrCareer = async (filterParam, fromDayAg
 };
 
 const TAGS_START_TITLE = 'Требуемые навыки: ';
+const regExpPatternContentVacancy = /( (?:(?:от)\s+(?:(?:\d[\s\d]*\d)+)\s+[^\s]{1,4}\s*)(?:(?:до)\s*(?:(?:\d[\s\d]*\d)+)\s*[^\s]{1,4})){1}|( (?:(?:от)\s+(?:(?:\d[\s\d]*\d)+)\s+[^\s]{1,4}\s*)|(?:(?:до)\s*(?:(?:\d[\s\d]*\d)+)\s*[^\s]{1,4})){1}/i;
 
 const parseSalaryFromTitle = (stringTitleVacancy, baseCurrency, rates) => {
   const USD = 'USD';
   const baseCurrencySymbol = mapCurrencyCodeToSymbol[baseCurrency];
-  const regExpPattern = /(?:(от)\s*(?:(\d[\s\d]*\d)+)\s*)?(?:(до)\s*(?:(\d[\s\d]*\d)+)\s*)?(.)\)$/;
+  const regExpPatternSalary = /(?:(от)\s*(?:(\d[\s\d]*\d)+)\s*)?(?:(до)\s*(?:(\d[\s\d]*\d)+)\s*)?(.)\)$/;
 
-  const [, , rawMin, , rawMax, rawCurrencySymbol] = stringTitleVacancy.match(regExpPattern);
+  const [, , rawMin, , rawMax, rawCurrencySymbol] = stringTitleVacancy.match(regExpPatternSalary);
   const currencySymbol = String(rawCurrencySymbol).trim();
 
   const currency = mapSymbolToCurrencyCode[currencySymbol];
@@ -137,29 +142,31 @@ export const parseFilterFormatVacancies = async (
 
   const rates = await getCurrencyRates();
 
-  const vacancies = vacanciesRaw.map((vacancy) => {
-    const salaryData = parseSalaryFromTitle(vacancy.title, baseCurrency, rates);
-    const salary = {
-      avg: salaryData.avg,
-      avgUSD: salaryData.avgUSD,
-      fork: salaryData.fork,
-      forkUSD: salaryData.forkUSD,
-    };
+  const vacancies = Array.from(vacanciesRaw)
+    .filter((vacancy) => vacancy.title)
+    .map((vacancy) => {
+      const salaryData = parseSalaryFromTitle(vacancy.title, baseCurrency, rates);
+      const salary = {
+        avg: salaryData.avg,
+        avgUSD: salaryData.avgUSD,
+        fork: salaryData.fork,
+        forkUSD: salaryData.forkUSD,
+      };
 
-    const tags = String(vacancy.content)
-      .slice(vacancy.content.indexOf(TAGS_START_TITLE) + TAGS_START_TITLE.length, -1)
-      .split(', ')
-      .map((tag) => tag.slice(1));
+      const tags = String(vacancy.content)
+        .slice(vacancy.content.indexOf(TAGS_START_TITLE) + TAGS_START_TITLE.length, -1)
+        .split(', ')
+        .map((tag) => tag.slice(1));
 
-    return {
-      ...vacancy,
-      date: dayjs(vacancy.isoDate),
-      ago: dayjs().to(dayjs(vacancy.isoDate)),
-      salary,
-      tags,
-      tagsLowerCase: tags.map((tag) => tag.toLowerCase()),
-    };
-  });
+      return {
+        ...vacancy,
+        date: dayjs(vacancy.isoDate),
+        ago: dayjs().to(dayjs(vacancy.isoDate)),
+        salary,
+        tags,
+        tagsLowerCase: tags.map((tag) => tag.toLowerCase()),
+      };
+    });
 
   const vacanciesFiltered = vacancies
     .filter(({ tagsLowerCase, title }) => {
@@ -177,12 +184,19 @@ export const parseFilterFormatVacancies = async (
     .filter(({ salary: { avg } }) => avg < maxSalary)
     .sort(({ salary: { avgUSD: A } }, { salary: { avgUSD: B } }) => B - A);
 
-  const stringVacancies = vacanciesFiltered
-    .map(
-      ({ content, ago, salary: { fork, avgUSD }, link }) =>
-        `${fork} (~${avgUSD} $) | ${ago} | ${content} \n${link}`
-    )
-    .join('\n\n');
+  const stringVacancies = vacanciesFiltered.map(
+    ({ content, ago, salary: { fork, avgUSD }, link }) => {
+      const contentFormat = content
+        .replace('Компания ', '')
+        .replace(' ищет хорошего специалиста на вакансию ', ' | ')
+        .replace(regExpPatternContentVacancy, '')
+        .replace('». ', '» | ')
+        .replace(' Требуемые навыки: ', ' | ')
+        .replace(/\.+$/g, '');
+
+      return `${fork} (~${avgUSD} $) | ${ago} | ${contentFormat} \n${link}`;
+    }
+  );
   const tagsVacancies = vacancies.flatMap(({ tagsLowerCase }) => tagsLowerCase);
   const topTagsByCount = Object.fromEntries(
     Object.entries(_.countBy(tagsVacancies)).sort(([, vA], [, vB]) => vB - vA)
