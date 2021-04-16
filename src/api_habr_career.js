@@ -103,7 +103,7 @@ const parseSalaryFromTitle = (stringTitleVacancy, baseCurrency, rates) => {
       : (min * 1.15 + min) / 2
     : (max + min) / 2;
   // const avgFormat = `${Math.floor(avg / 1000)} тыс.`;
-  const avgUSD = convertCurrency(avg, rates, currency, USD);
+  const avgUSD = convertCurrency(avg, rates, baseCurrency, USD);
 
   return {
     raw: {

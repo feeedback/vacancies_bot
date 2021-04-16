@@ -19,7 +19,7 @@ const URL_RSS =
   'https://career.habr.com/vacancies/rss?currency=RUR&divisions[]=apps&divisions[]=software&divisions[]=backend&divisions[]=frontend&salary=40000&skills[]=264&sort=date&type=all&with_salary=1';
 
 const main = async () => {
-  const vacanciesRaw = await getVacancyByFilterFromRssHabrCareer(URL_RSS, 1);
+  const vacanciesRaw = await getVacancyByFilterFromRssHabrCareer(URL_RSS, 5);
   const { stringVacancies, topTagsByCount } = await parseFilterFormatVacancies(
     vacanciesRaw,
     'RUB',
@@ -29,7 +29,7 @@ const main = async () => {
     0,
     200000
   );
-  console.log(topTagsByCount);
+  // console.log(topTagsByCount);
 
   console.log(stringVacancies);
 };
