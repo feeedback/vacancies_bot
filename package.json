@@ -1,0 +1,41 @@
+{
+  "name": "habr_career_parser",
+  "private": true,
+  "version": "1.0.0",
+  "description": "[![Actions Status](https://github.com/feeedback/js-algorithms-project-lvl1/workflows/hexlet-check/badge.svg)](https://github.com/feeedback/js-algorithms-project-lvl1/actions) [![Maintainability](https://api.codeclimate.com/v1/badges/b88e83aa538061d87a77/maintainability)](https://codeclimate.com/github/feeedback/js-algorithms-project-lvl1/maintainability) [![Test Coverage](https://api.codeclimate.com/v1/badges/b88e83aa538061d87a77/test_coverage)](https://codeclimate.com/github/feeedback/js-algorithms-project-lvl1/test_coverage) [![wakatime](https://wakatime.com/badge/github/feeedback/js-algorithms-project-lvl1.svg)](https://wakatime.com/badge/github/feeedback/js-algorithms-project-lvl1)",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "npx jest --passWithNoTests",
+    "run": "node src/index.js"
+  },
+  "author": "Alexander Rzhanitsyn",
+  "license": "ISC",
+  "engines": {
+    "node": ">=14"
+  },
+  "type": "module",
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {}
+  },
+  "dependencies": {
+    "axios": "^0.21.1",
+    "currency-formatter": "^1.5.7",
+    "dayjs": "^1.10.4",
+    "debug": "^4.3.1",
+    "dotenv": "^8.2.0",
+    "lodash": "^4.17.21",
+    "qs": "^6.5.2",
+    "rss-parser": "^3.12.0"
+  },
+  "devDependencies": {
+    "@jest/globals": "^26.6.2",
+    "eslint": "^7.23.0",
+    "eslint-config-airbnb-base": "^14.2.1",
+    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-jest": "^24.3.4",
+    "jest": "^26.6.3",
+    "jest-circus": "^26.6.3",
+    "jest-cli": "^26.6.3"
+  }
+}
