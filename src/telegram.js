@@ -14,16 +14,17 @@ const bot = new Telegraf(process.env.TELEGRAM_BOT_API);
 const MY_URL_RSS =
   'https://career.habr.com/vacancies/rss?currency=RUR&divisions[]=apps&divisions[]=software&divisions[]=backend&divisions[]=frontend&salary=49000&skills[]=264&sort=date&type=all&with_salary=1';
 
-const mapUserIdToRss = {
-  413777946: MY_URL_RSS,
+const mapUserIdToState = {
+  413777946: {
+    rss: MY_URL_RSS,
+    rssMessageID: null,
+    pollOptions: null,
+    selectedPollOptionsIndex: null,
+    excludeTags: [],
+  },
 };
-const mapUserIdToRssMessageID = {};
 
 const setRss = async (ctx, rss) => {
-  // console.log(ctx.update.message);
-  // console.log(ctx.update.message);
-  // const rss = ctx.update.message.text.slice(5).trim();
-  // console.log(ctx.update.message);
   let isValidURL = rss.startsWith('https://career.habr.com/vacancies/rss');
   try {
     // eslint-disable-next-line no-new
@@ -38,9 +39,31 @@ const setRss = async (ctx, rss) => {
     return;
   }
 
-  mapUserIdToRss[ctx.update.message.from.id] = rss;
+  const userId = ctx.update.message.from.id;
+  if (!mapUserIdToState[userId]) {
+    mapUserIdToState[userId] = {};
+  }
+
+  mapUserIdToState[userId].rss = rss;
   await ctx.reply('Saved your RSS successful!');
-  console.log('user id', ctx.update.message.from.id, 'rss saved', rss);
+  console.log('user id', userId, 'rss saved', rss);
+
+  const { topTagsByCount, topTagsByCountByFiltered } = await getRss(rss, 2);
+  // await ctx.poll([topTagsByCount]);
+  // await ctx.telegram.sendPoll(ctx.chatId: string | number, question: string, options: topTagsByCount, extra ?: ExtraPoll)
+  const topTags = Object.entries(topTagsByCount)
+    .filter(([, count]) => count >= 2)
+    .map(([tag]) => tag);
+  const pollOptions = topTags.slice(0, 10);
+
+  mapUserIdToState[userId].pollOptions = pollOptions;
+  const poll = await ctx.telegram.sendPoll(
+    ctx.chat.id,
+    'Выберите теги, вакансии с которыми исключить из выдачи',
+    pollOptions,
+    { allows_multiple_answers: true, is_anonymous: false }
+  );
+  console.log(poll);
 };
 
 bot.start((ctx) => ctx.replyWithDice());
@@ -65,40 +88,37 @@ bot.help(async (ctx) => {
 bot.use(async (ctx, next) => {
   console.time(`Processing`);
   await next(); // runs next middleware
-  // runs after next middleware finishes
   console.timeEnd(`Processing`);
   console.log('');
 });
 
 bot.command('rss', async (ctx) => {
   if (ctx.update.message.text.trim() === '/rss') {
-    const { message_id: commandMessageId } = await ctx.reply(
+    const message = await ctx.reply(
       'please copy/paste RSS link from Habr.Career with yours filters https://career.habr.com/vacancies',
-      // Markup.inlineKeyboard(['', 'rss_action'])
-      // Markup.forceReply(),
-      // Markup.keyboard()
       { disable_web_page_preview: true }
     );
-    mapUserIdToRssMessageID[ctx.update.message.from.id] = commandMessageId;
+    const userId = ctx.update.message.from.id;
+    mapUserIdToState[userId].rssMessageID = message.message_id;
     return;
   }
-
+  // если ссылка уже передана в команде
   const rss = ctx.update.message.text.slice(5).trim();
   await setRss(ctx, rss);
 });
 
-// bot.action('rss_action', async (ctx) => {
-
-// });
-
 bot.command('get', async (ctx) => {
-  const rss = mapUserIdToRss[ctx.update.message.from.id];
+  const userId = ctx.update.message.from.id;
+  const rss = mapUserIdToState[userId]?.rss;
+
   if (!rss) {
     ctx.reply('RSS not found! Please add that with /rss [link]');
-    console.log('user id', ctx.update.message.from.id, 'not found rss');
+    console.log('user id', userId, 'not found rss');
     return;
   }
   ctx.telegram.webhookReply = false;
+
+  // ctx.telegram.sendPoll
   const dayRaw = ctx.update.message.text.slice(5).trim();
   let day = Number(dayRaw);
   if (!dayRaw) {
@@ -108,7 +128,7 @@ bot.command('get', async (ctx) => {
   ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
 
   try {
-    const stringVacancies = await getRss(rss, day);
+    const { stringVacancies } = await getRss(rss, day);
     console.log('вакансии получены', stringVacancies.length);
     const message = stringVacancies.join('\n\n');
 
@@ -132,20 +152,38 @@ bot.command('get', async (ctx) => {
 });
 
 bot.on('text', async (ctx) => {
-  // console.log({ ctx });
-  const isRss = mapUserIdToRssMessageID[ctx.update.message.from.id];
+  const userId = ctx.update.message.from.id;
+  const isRss = mapUserIdToState[userId]?.rssMessageID;
 
   if (isRss) {
     if (ctx.message.message_id === isRss + 1) {
       await setRss(ctx, ctx.update.message.text);
     } else {
-      delete mapUserIdToRssMessageID[ctx.update.message.from.id];
+      delete mapUserIdToState[userId].rssMessageID;
     }
   }
 });
 
+bot.on('poll_answer', (ctx) => {
+  const { poll_answer: poll } = ctx.update;
+
+  if (poll.user.is_bot) {
+    return;
+  }
+
+  // const userId = poll.user.id;
+  const excludeTags = poll.option_ids.map(
+    (index) => mapUserIdToState[poll.user.id].pollOptions[index]
+  );
+  mapUserIdToState[poll.user.id].excludeTags = excludeTags;
+  console.log({ excludeTags });
+  // setTimeout(() => {
+  //   ище.stopPoll(ctx.update.poll_answer.poll_id).then((poll) => console.log(poll));
+  // }, 1000);
+  // console.log(ctx.update);
+});
+// bot.inlineQuery();
 bot.launch();
 
-// Enable graceful stop
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));

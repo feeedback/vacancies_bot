@@ -3,6 +3,8 @@ import vacancyExcludeWordsInDesc from '../data/exclude_words_desc.js';
 import {
   getVacancyByFilterFromRssHabrCareer,
   parseFilterFormatVacancies,
+  getTopTagsByCount,
+  getStringifyVacancies,
 } from './api_habr_career.js';
 
 // const filterVacanciesSearch = {
@@ -20,7 +22,7 @@ import {
 
 const getRss = async (url, day = 2) => {
   const vacanciesRaw = await getVacancyByFilterFromRssHabrCareer(url, day);
-  const { stringVacancies } = await parseFilterFormatVacancies(
+  const { vacanciesFiltered, vacancies } = await parseFilterFormatVacancies(
     vacanciesRaw,
     'RUB',
     vacancyExcludeTags,
@@ -29,8 +31,12 @@ const getRss = async (url, day = 2) => {
     0,
     250000
   );
-  return stringVacancies;
+  const stringVacancies = getStringifyVacancies(vacanciesFiltered);
+
+  const topTagsByCount = getTopTagsByCount(vacancies);
+  const topTagsByCountByFiltered = getTopTagsByCount(vacanciesFiltered);
+
+  return { stringVacancies, topTagsByCount, topTagsByCountByFiltered };
 };
-// main(URL_RSS);
 
 export default getRss;

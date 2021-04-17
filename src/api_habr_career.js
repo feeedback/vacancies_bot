@@ -184,6 +184,10 @@ export const parseFilterFormatVacancies = async (
     .filter(({ salary: { avg } }) => avg < maxSalary)
     .sort(({ salary: { avgUSD: A } }, { salary: { avgUSD: B } }) => B - A);
 
+  return { vacanciesFiltered, vacancies };
+};
+
+export const getStringifyVacancies = (vacanciesFiltered) => {
   const stringVacancies = vacanciesFiltered.map(
     ({ content, ago, salary: { fork, avgUSD }, link }) => {
       const contentFormat = content
@@ -197,10 +201,14 @@ export const parseFilterFormatVacancies = async (
       return `${fork} (~${avgUSD} $) | ${ago} | ${contentFormat} \n${link}`;
     }
   );
+
+  return stringVacancies;
+};
+
+export const getTopTagsByCount = (vacancies) => {
   const tagsVacancies = vacancies.flatMap(({ tagsLowerCase }) => tagsLowerCase);
   const topTagsByCount = Object.fromEntries(
     Object.entries(_.countBy(tagsVacancies)).sort(([, vA], [, vB]) => vB - vA)
   );
-
-  return { vacanciesFiltered, stringVacancies, topTagsByCount };
+  return topTagsByCount;
 };
