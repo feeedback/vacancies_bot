@@ -6,7 +6,8 @@ import getRss from '../habr_career/index.js';
 import { botStartMessage, commandDescription, initStateUsers } from './settings.js';
 
 const markdownRegexp = new RegExp(`([${markdownEscapes.join('')}])`);
-const mapUserIdToState = { ...initStateUsers };
+
+export const mapUserIdToState = { ...initStateUsers };
 
 const setRss = async (ctx, rss) => {
   let isValidURL = rss.startsWith('https://career.habr.com/vacancies/rss');
@@ -122,7 +123,7 @@ const setExcludeWords = async (ctx, isSaveOld = false) => {
   // await ctx.poll([topTagsByCount]);
   // await ctx.telegram.sendPoll(ctx.chatId: string | number, question: string, options: topTagsByCount, extra ?: ExtraPoll)
   const topWords = Object.entries(isSaveOld ? topWordsByCountByFiltered : topWordsByCount)
-    .filter(([, count]) => count >= 2)
+    .filter(([, count]) => count >= 1)
     .map(([word]) => word);
 
   const chunkedWords = _.chunk(topWords, 10);
@@ -259,7 +260,7 @@ const getVacancy = async (ctx, isSub = false, isFirstSub = false) => {
   ctx.deleteMessage(tempMessageId);
 };
 
-const handlers = {
+export const handlers = {
   use: [
     async (ctx, next) => {
       const d = Date.now();
@@ -277,14 +278,6 @@ const handlers = {
   start: (ctx) => ctx.replyWithMarkdown(botStartMessage.join('\n')),
   settings: async (ctx) => {
     await ctx.setMyCommands(commandDescription);
-    // {
-    //   command: '/ex_words',
-    //   description: 'add words, vacancies with which in description will be excluded',
-    // },
-    // {
-    //   command: '/ex_words_add',
-    //   description: 'add words, vacancies with which in description will be excluded',
-    // },
   },
   help: async (ctx) => {
     const commands = await ctx.getMyCommands();
@@ -354,7 +347,7 @@ const handlers = {
       }
       const wordsStr = mapUserIdToState[userId].excludeWords
         // eslint-disable-next-line prettier/prettier
-        .map((word) => `  \`#${word.replace(markdownRegexp, '$1')}\``)
+        .map((word) => `  \`${word.replace(markdownRegexp, '$1')}\``)
         .join('\n');
 
       ctx.replyWithMarkdown(
@@ -461,4 +454,12 @@ const handlers = {
   },
 };
 
-export default handlers;
+export const unsubAll = () => {
+  const intervalIds = Object.values(mapUserIdToState)
+    .map((userState) => userState.subIntervalId)
+    .filter((id) => Number.isInteger(id));
+
+  for (const subId of intervalIds) {
+    clearInterval(subId);
+  }
+};
