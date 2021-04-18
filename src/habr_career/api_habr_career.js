@@ -5,14 +5,13 @@ import qs from 'qs';
 import _ from 'lodash';
 import dayjs from 'dayjs';
 import dayjsRelativeTime from 'dayjs/plugin/relativeTime.js';
-import { delayMs } from './utils.js';
+import { delayMs } from '../utils/utils.js';
 import {
   mapCurrencyCodeToSymbol,
   mapSymbolToCurrencyCode,
-  getCurrencyRates,
   getNumberFromCurrency,
   convertCurrency,
-} from './api_currency.js';
+} from '../utils/api_currency.js';
 
 dayjs.extend(dayjsRelativeTime);
 
@@ -131,6 +130,7 @@ const parseSalaryFromTitle = (stringTitleVacancy, baseCurrency, rates) => {
 export const parseFilterFormatVacancies = async (
   vacanciesRaw,
   baseCurrency = 'RUB',
+  rates,
   vacancyExcludeTags,
   vacancyExcludeWordsInDesc,
   maxCountIncludesBadTag = 0,
@@ -139,8 +139,6 @@ export const parseFilterFormatVacancies = async (
 ) => {
   const vacancyExcludeTagsLC = vacancyExcludeTags.map((tag) => tag.toLowerCase());
   const vacancyExcludeWordsInDescLC = vacancyExcludeWordsInDesc.map((word) => word.toLowerCase());
-
-  const rates = await getCurrencyRates();
 
   const vacancies = Array.from(vacanciesRaw)
     .filter((vacancy) => vacancy.title)

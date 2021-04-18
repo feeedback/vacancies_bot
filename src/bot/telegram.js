@@ -4,8 +4,9 @@ import { Telegraf } from 'telegraf';
 import { URL } from 'url';
 import _ from 'lodash';
 import { markdownEscapes } from 'markdown-escapes';
-import getRss from './index.js';
-import vacancyExcludeTagsMy from '../data/exclude_tags.js';
+import getRss from '../habr_career/index.js';
+import vacancyExcludeTagsMy from '../../data/settings/exclude_tags.js';
+import MY_SETTINGS from '../../data/settings/my_rss.js';
 // import vacancyExcludeWordsInDescMy from '../data/exclude_words_desc.js';
 const markdownRegexp = new RegExp(`([${markdownEscapes.join('')}])`);
 const bot = new Telegraf(process.env.TELEGRAM_BOT_API);
@@ -15,12 +16,10 @@ const bot = new Telegraf(process.env.TELEGRAM_BOT_API);
 //   console.log(ctx);
 //   ctx.reply('👍');
 // });
-const MY_URL_RSS =
-  'https://career.habr.com/vacancies/rss?currency=RUR&divisions[]=apps&divisions[]=software&divisions[]=backend&divisions[]=frontend&salary=49000&skills[]=264&sort=date&type=all&with_salary=1';
 
 const mapUserIdToState = {
   413777946: {
-    rss: MY_URL_RSS,
+    rss: MY_SETTINGS.rss,
     rssMessageID: null,
     pollOptions: null, // []
     selectedPollOptionsIndex: null, // []
@@ -59,16 +58,20 @@ const setExcludeTags = async (ctx, isSaveOld = false) => {
     mapUserIdToState[userId] = {};
   }
   if (!mapUserIdToState[userId].rss) {
-    ctx.reply('Для начала установите RSS ссылку, командой */rss*', { parse_mode: 'Markdown' });
+    ctx.replyWithMarkdown('Для начала установите RSS ссылку, командой */rss*');
     return;
   }
 
   if (!mapUserIdToState[userId]?.excludeTags) {
     mapUserIdToState[userId].excludeTags = [];
   }
+
   if (!isSaveOld) {
     mapUserIdToState[userId].excludeTags = [];
   }
+
+
+  ctx.replyWithMarkdown('_Потом вы можете посмотреть список добавленных искл. тегов командой */get_tags*_');
 
   const { topTagsByCount, topTagsByCountByFiltered } = await getRss(
     mapUserIdToState[userId].rss,
@@ -100,7 +103,16 @@ const setExcludeTags = async (ctx, isSaveOld = false) => {
   }
 };
 
-bot.start((ctx) => ctx.replyWithDice());
+const startMessage = [
+  '*Здравствуйте!*',
+  '1. Для старта установите RSS ссылку командой */rss*',
+  '2. Вы можете указать исключаемые теги командой */ex_tags*',
+  '2.1 Вы можете посмотреть список добавленных искл. тегов командой */get_tags*',
+  '3 Получить вакансии командой */get* `[from_day_ago=2]`',
+  // '4 Подписаться на получение новых вакансий при их появлении командой */sub*'
+]
+
+bot.start((ctx) => ctx.replyWithMarkdown(startMessage.join('\n')));
 bot.settings(async (ctx) => {
   await ctx.setMyCommands([
     { command: '/rss', description: 'set rss link' },
@@ -129,16 +141,16 @@ bot.help(async (ctx) => {
 });
 
 bot.use(async (ctx, next) => {
-  console.time(`Processing`);
+  const d = Date.now()
   await next(); // runs next middleware
-  console.timeEnd(`Processing`);
+  console.log(`Processing`, Date.now() - d, 'ms');
   console.log('');
 });
 
 bot.command('rss', async (ctx) => {
   if (ctx.update.message.text.trim() === '/rss') {
     const message = await ctx.reply(
-      'please copy/paste RSS link from Habr. Career with yours filters https://career.habr.com/vacancies',
+      'Пожалуйста, скопируйте сюда RSS ссылку из поиска с Вашим фильтром из https://career.habr.com/vacancies',
       { disable_web_page_preview: true }
     );
     const userId = ctx.update.message.from.id;
@@ -153,18 +165,15 @@ bot.command('rss', async (ctx) => {
 bot.command('ex_tags', async (ctx) => {
   await setExcludeTags(ctx);
 });
+
 bot.command('get_tags', async (ctx) => {
   const userId = ctx.update.message.from.id;
   if (!mapUserIdToState[userId]?.excludeTags) {
-    ctx.reply('Для начала установите RSS ссылку */rss*', {
-      parse_mode: 'Markdown',
-    });
+    ctx.replyWithMarkdown('Для начала установите RSS ссылку */rss*');
     return;
   }
   if (!mapUserIdToState[userId].excludeTags.length === 0) {
-    ctx.reply('Ваш список исключаемых тегов пуст. Вы можете добавить их командой */ex_tags*', {
-      parse_mode: 'Markdown',
-    });
+    ctx.replyWithMarkdown('Ваш список исключаемых тегов пуст. Вы можете добавить их командой */ex_tags*');
     return;
   }
   const tagsStr = mapUserIdToState[userId].excludeTags
@@ -187,11 +196,15 @@ bot.command('get', async (ctx) => {
   const rss = mapUserIdToState[userId]?.rss;
 
   if (!rss) {
-    ctx.reply('RSS not found! Please add that with */rss* [link]', { parse_mode: 'Markdown' });
+    ctx.replyWithMarkdown('RSS not found! Please add that with */rss* [link]');
     console.log('user id', userId, 'not found rss');
     return;
   }
   ctx.telegram.webhookReply = false;
+
+  if (!mapUserIdToState[userId].excludeTags.length === 0) {
+    ctx.replyWithMarkdown('_Ваш список исключаемых тегов пуст. Вы можете добавить их командой */ex_tags*_');
+  }
 
   // ctx.telegram.sendPoll
   const dayRaw = ctx.update.message.text.slice(5).trim();

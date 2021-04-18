@@ -1,6 +1,24 @@
-### Hexlet tests and linter status:
+## Telegram бот для получения вакансий по своему гибкому фильтру с career.habr.com
 
-[![Actions Status](https://github.com/feeedback/js-algorithms-project-lvl1/workflows/hexlet-check/badge.svg)](https://github.com/feeedback/js-algorithms-project-lvl1/actions)
-[![Maintainability](https://api.codeclimate.com/v1/badges/b88e83aa538061d87a77/maintainability)](https://codeclimate.com/github/feeedback/js-algorithms-project-lvl1/maintainability)
-[![Test Coverage](https://api.codeclimate.com/v1/badges/b88e83aa538061d87a77/test_coverage)](https://codeclimate.com/github/feeedback/js-algorithms-project-lvl1/test_coverage)
-[![wakatime](https://wakatime.com/badge/github/feeedback/js-algorithms-project-lvl1.svg)](https://wakatime.com/badge/github/feeedback/js-algorithms-project-lvl1)
+### Roadmap telegram bot
+
+- [ ] Команда `/sub` - подписаться на получение новых вакансий согласно фильтру при их появлении
+- [ ] Команда `/get_words` - посмотреть ваши настроенные исключаемые слова
+- [ ] Команда `/ex_words_add` - добавления новых исключаемых слов с сохранением старых
+- [ ] Команда `/ex_words` - добавления слов из описания, вакансии с которыми уберутся из выдачи
+- [x] Команда `/get [from_day_ago=2]` - получение вакансий согласно фильтру
+- [x] Команда `/get_tags` - посмотреть ваши настроенные исключаемые теги
+- [x] Команда `/ex_tags_add` - добавление новых исключаемых тегов с сохранением старых
+- [x] Команда `/ex_tags` - добавление тегов, вакансии с которыми уберутся из выдачи
+- [x] Команда `/rss [link]` - Установка в бот своей ссылки RSS с фильтрами из career.habr.com
+
+### Roadmap career.habr API
+
+- [ ] Кэширования результата запроса курсов валют (на 1 сутки)
+- [x] Фоллбек при ошибке запроса курса валют на usd/rub 1/75
+- [x] Фильтрация вакансий по словам в описании вакансии (исключающая вакансии, которые они имеют)
+- [x] Фильтрация вакансий по тегам (исключающая вакансии, которые они имеют)
+- [x] Фильтрация вакансий по min/max зп
+- [x] Форматирование вакансии стандартным образом (кратко, единый формат отображения предложения ЗП)
+- [x] Парсинг предлагаемой ЗП в удобной валюте/формате
+- [x] Парсинг вакансий через RSS (с родным фильтром поиска в ссылке)

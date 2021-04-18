@@ -4,7 +4,7 @@ import axios from 'axios';
 // import _ from 'lodash';
 import currencyFormatter from 'currency-formatter';
 // import dayjs from 'dayjs';
-import currencySymbols from '../data/currency.js';
+import currencySymbols from '../../data/currency.js';
 
 export const mapCurrencyCodeToSymbol = Object.fromEntries(
   currencySymbols.map(({ symbol, code }) => [code, symbol])
@@ -14,11 +14,17 @@ export const mapSymbolToCurrencyCode = Object.fromEntries(
 );
 
 export const getCurrencyRates = async () => {
-  const res = await axios.get('http://data.fixer.io/api/latest', {
-    params: { access_key: process.env.FIXER_API_KEY },
-  });
+  try {
+    const res = await axios.get('http://data.fixer.io/api/latest', {
+      params: { access_key: process.env.FIXER_API_KEY },
+    });
 
-  return res.data.rates;
+    const { rates, timestamp, date } = res.data;
+    return { rates, timestamp, date };
+  } catch (error) {
+    console.log('error getCurrencyRates', error);
+    return { rates: { RUB: 75, USD: 1 } };
+  }
 };
 
 export const convertCurrencyToBase = (rates, base = 'RUB') => {

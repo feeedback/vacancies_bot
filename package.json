@@ -7,8 +7,9 @@
   "scripts": {
     "test": "npx jest --passWithNoTests",
     "run": "node src/index.js",
-    "teleramBot": "node src/telegram.js",
-    "teleramBotPM2": "pm2 src/telegram.js"
+    "teleramBot": "node src/bot/telegram.js",
+    "teleramServe": "nodemon src/bot/telegram.js",
+    "teleramBotPM2": "pm2 src/bot/telegram.js"
   },
   "author": "Alexander Rzhanitsyn",
   "license": "ISC",
