@@ -5,7 +5,7 @@ import qs from 'qs';
 import _ from 'lodash';
 import dayjs from 'dayjs';
 import dayjsRelativeTime from 'dayjs/plugin/relativeTime.js';
-import { delayMs } from '../utils/utils.js';
+import { delayMs, getHashByStr } from '../utils/utils.js';
 import {
   mapCurrencyCodeToSymbol,
   mapSymbolToCurrencyCode,
@@ -56,6 +56,7 @@ export const getVacancyByFilterFromRssHabrCareer = async (filterParam, fromDayAg
     .map(({ title, content, author, isoDate, link, guid }) => ({
       title,
       content,
+      hashContent: getHashByStr(content),
       author,
       isoDate,
       link,

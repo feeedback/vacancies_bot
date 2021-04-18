@@ -13,7 +13,11 @@ export const mapSymbolToCurrencyCode = Object.fromEntries(
   currencySymbols.map(({ symbol, code }) => [symbol, code])
 );
 
-export const getCurrencyRates = async () => {
+export const getCurrencyRates = async (isTest = false) => {
+  const ratesFallback = { RUB: 75, USD: 1 };
+  if (isTest) {
+    return { rates: ratesFallback };
+  }
   try {
     const res = await axios.get('http://data.fixer.io/api/latest', {
       params: { access_key: process.env.FIXER_API_KEY },
@@ -23,7 +27,7 @@ export const getCurrencyRates = async () => {
     return { rates, timestamp, date };
   } catch (error) {
     console.log('error getCurrencyRates', error);
-    return { rates: { RUB: 75, USD: 1 } };
+    return { rates: ratesFallback };
   }
 };
 
