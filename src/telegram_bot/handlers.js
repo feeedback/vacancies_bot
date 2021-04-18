@@ -53,7 +53,7 @@ const setExcludeTags = async (ctx, isSaveOld = false) => {
     mapUserIdToState[userId].excludeTags = [];
   }
 
-  ctx.replyWithMarkdown(
+  await ctx.replyWithMarkdown(
     '_Потом вы можете посмотреть список добавленных искл. тегов командой_ */extags*'
   );
   ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
@@ -255,6 +255,8 @@ const handlers = {
         ctx.reply('Для начала установите RSS ссылку */rss*');
         return;
       }
+
+      ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
       if (!mapUserIdToState[userId].excludeTags.length === 0) {
         ctx.replyWithMarkdown(
           'Ваш список исключаемых тегов пуст. Вы можете добавить их командой */extagsset*'
