@@ -1,4 +1,8 @@
-## Telegram бот для получения вакансий по своему гибкому фильтру с career.habr.com
+## Хабр.Карьера удобная фильтрация/уведомления
+
+**Telegram бот для получения вакансий по своему гибкому фильтру с career.habr.com**
+
+[![wakatime](https://wakatime.com/badge/github/feeedback/habr_career_bot.svg)](https://wakatime.com/badge/github/feeedback/habr_career_bot)
 
 ### Roadmap telegram bot
 
