@@ -4,6 +4,7 @@ import {
   getVacancyByFilterFromRssHabrCareer,
   parseFilterFormatVacancies,
   getTopTagsByCount,
+  getTopWordByCount,
   getStringifyVacancies,
 } from './api_habr_career.js';
 import { getCurrencyRates } from '../utils/api_currency.js';
@@ -31,6 +32,9 @@ const getRss = async (
   const topTagsByCount = getTopTagsByCount(vacancies);
   const topTagsByCountByFiltered = getTopTagsByCount(vacanciesFiltered);
 
+  const topWordsByCount = getTopWordByCount(vacancies);
+  const topWordsByCountByFiltered = getTopWordByCount(vacanciesFiltered);
+
   const hashes = vacanciesFiltered.map(({ hashContent }) => hashContent);
   return {
     stringVacancies,
@@ -39,6 +43,8 @@ const getRss = async (
     getStringifyVacancies,
     topTagsByCount,
     topTagsByCountByFiltered,
+    topWordsByCount,
+    topWordsByCountByFiltered,
   };
 };
 

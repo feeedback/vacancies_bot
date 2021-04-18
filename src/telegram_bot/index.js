@@ -13,16 +13,22 @@ for (const middleware of handlers.use) {
 }
 
 bot.command('rss', handlers.command.rss);
+
 bot.command('extagsset', handlers.command.extagsset);
 bot.command('extags', handlers.command.extags);
 bot.command('extagsadd', handlers.command.extagsadd);
+
+bot.command('exwordsset', handlers.command.exwordsset); //
+bot.command('exwords', handlers.command.exwords); //
+bot.command('exwordsadd', handlers.command.extagsadd); //
+
+bot.command('sub', handlers.command.sub); //
+bot.command('unsub', handlers.command.unsub); //
+
 bot.command('get', handlers.command.get);
-bot.command('sub', handlers.command.sub);
-bot.command('unsub', handlers.command.unsub);
 
-bot.on('text', handlers.on.text);
-bot.on('poll_answer', handlers.on.poll_answer);
-
+bot.on('text', handlers.onEvent.textH);
+bot.on('poll_answer', handlers.onEvent.poll_answer);
 bot.launch();
 
 process.once('SIGINT', () => bot.stop('SIGINT'));

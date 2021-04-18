@@ -159,6 +159,7 @@ export const parseFilterFormatVacancies = async (
 
       return {
         ...vacancy,
+        titleShort: vacancy.title.match(/^Требуется «([^»]+?)»/)[1],
         date: dayjs(vacancy.isoDate),
         ago: dayjs().to(dayjs(vacancy.isoDate)),
         salary,
@@ -168,13 +169,13 @@ export const parseFilterFormatVacancies = async (
     });
 
   const vacanciesFiltered = vacancies
-    .filter(({ tagsLowerCase, title }) => {
+    .filter(({ tagsLowerCase, titleShort }) => {
       const countBadTag = vacancyExcludeTagsLC.reduce(
         (sum, badTag) => sum + tagsLowerCase.includes(badTag),
         0
       );
       const countBadWord = vacancyExcludeWordsInDescLC.reduce(
-        (sum, badTag) => sum + _.words(title.toLowerCase()).includes(badTag),
+        (sum, badTag) => sum + _.words(titleShort.toLowerCase()).includes(badTag),
         0
       );
       // console.log('countBadTag <= maxCountIncludesBadTag', { countBadTag, maxCountIncludesBadTag });
@@ -210,4 +211,14 @@ export const getTopTagsByCount = (vacancies) => {
     Object.entries(_.countBy(tagsVacancies)).sort(([, vA], [, vB]) => vB - vA)
   );
   return topTagsByCount;
+};
+
+export const getTopWordByCount = (vacancies) => {
+  const wordTitleVacancies = vacancies.flatMap(({ titleShort }) =>
+    _.words(titleShort.toLowerCase())
+  );
+  const topWordsByCount = Object.fromEntries(
+    Object.entries(_.countBy(wordTitleVacancies)).sort(([, vA], [, vB]) => vB - vA)
+  );
+  return topWordsByCount;
 };

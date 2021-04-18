@@ -52,11 +52,11 @@ const setExcludeTags = async (ctx, isSaveOld = false) => {
   if (!isSaveOld) {
     mapUserIdToState[userId].excludeTags = [];
   }
-
+  ctx.telegram.webhookReply = false;
   await ctx.replyWithMarkdown(
     '_Потом вы можете посмотреть список добавленных искл. тегов командой_ */extags*'
   );
-  ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
+  await ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
   const { topTagsByCount, topTagsByCountByFiltered } = await getRss(
     mapUserIdToState[userId].rss,
     10
@@ -69,17 +69,18 @@ const setExcludeTags = async (ctx, isSaveOld = false) => {
 
   const chunkedTags = _.chunk(topTags, 10);
 
-  if (!mapUserIdToState[userId].pollOptions) {
-    mapUserIdToState[userId].pollOptions = {};
+  if (!mapUserIdToState[userId].pollOptionsExTags) {
+    mapUserIdToState[userId].pollOptionsExTags = {};
   }
-  for (const pollOptions of chunkedTags) {
-    if (pollOptions.length < 2) {
+  for (const pollOptionsExTags of chunkedTags) {
+    if (pollOptionsExTags.length < 2) {
       break;
     }
+    ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
     const { poll } = await ctx.telegram.sendPoll(
       ctx.chat.id,
       'Выберите теги, вакансии с которыми исключить из выдачи',
-      pollOptions,
+      pollOptionsExTags,
       {
         allows_multiple_answers: true,
         is_anonymous: false,
@@ -87,8 +88,67 @@ const setExcludeTags = async (ctx, isSaveOld = false) => {
       }
     );
 
-    mapUserIdToState[userId].pollOptions[poll.id] = pollOptions;
+    mapUserIdToState[userId].pollOptionsExTags[poll.id] = pollOptionsExTags;
   }
+  ctx.telegram.webhookReply = true;
+};
+
+const setExcludeWords = async (ctx, isSaveOld = false) => {
+  const userId = ctx.update.message.from.id;
+  if (!mapUserIdToState[userId]) {
+    mapUserIdToState[userId] = {};
+  }
+  if (!mapUserIdToState[userId].rss) {
+    ctx.replyWithMarkdown('Для начала установите RSS ссылку, командой */rss*');
+    return;
+  }
+
+  if (!mapUserIdToState[userId]?.excludeWords) {
+    mapUserIdToState[userId].excludeWords = [];
+  }
+
+  if (!isSaveOld) {
+    mapUserIdToState[userId].excludeWords = [];
+  }
+  ctx.telegram.webhookReply = false;
+  await ctx.replyWithMarkdown(
+    '_Потом вы можете посмотреть список добавленных искл. слов командой_ */exwords*'
+  );
+  await ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
+  const { topWordsByCount, topWordsByCountByFiltered } = await getRss(
+    mapUserIdToState[userId].rss,
+    10
+  );
+  // await ctx.poll([topTagsByCount]);
+  // await ctx.telegram.sendPoll(ctx.chatId: string | number, question: string, options: topTagsByCount, extra ?: ExtraPoll)
+  const topWords = Object.entries(isSaveOld ? topWordsByCountByFiltered : topWordsByCount)
+    .filter(([, count]) => count >= 2)
+    .map(([word]) => word);
+
+  const chunkedWords = _.chunk(topWords, 10);
+
+  if (!mapUserIdToState[userId].pollOptionsExWords) {
+    mapUserIdToState[userId].pollOptionsExWords = {};
+  }
+  for (const pollOptionsExWords of chunkedWords) {
+    if (pollOptionsExWords.length < 2) {
+      break;
+    }
+    await ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
+    const { poll } = await ctx.telegram.sendPoll(
+      ctx.chat.id,
+      'Выберите слова, вакансии с которыми исключить из выдачи',
+      pollOptionsExWords,
+      {
+        allows_multiple_answers: true,
+        is_anonymous: false,
+        disable_notification: true,
+      }
+    );
+
+    mapUserIdToState[userId].pollOptionsExWords[poll.id] = pollOptionsExWords;
+  }
+  ctx.telegram.webhookReply = true;
 };
 
 const getVacancy = async (ctx, isSub = false, isFirstSub = false) => {
@@ -115,7 +175,7 @@ const getVacancy = async (ctx, isSub = false, isFirstSub = false) => {
     try {
       const { hashes, vacanciesFiltered, getStringifyVacancies } = await getRss(
         rss,
-        3,
+        2,
         mapUserIdToState[userId].excludeTags
       );
       console.log('вакансии получены', vacanciesFiltered.length);
@@ -252,12 +312,11 @@ const handlers = {
     extags: async (ctx) => {
       const userId = ctx.update.message.from.id;
       if (!mapUserIdToState[userId]?.excludeTags) {
-        ctx.reply('Для начала установите RSS ссылку */rss*');
-        return;
+        mapUserIdToState[userId].excludeTags = [];
       }
 
       ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
-      if (!mapUserIdToState[userId].excludeTags.length === 0) {
+      if (mapUserIdToState[userId].excludeTags.length === 0) {
         ctx.replyWithMarkdown(
           'Ваш список исключаемых тегов пуст. Вы можете добавить их командой */extagsset*'
         );
@@ -276,6 +335,37 @@ const handlers = {
     extagsadd: async (ctx) => {
       await setExcludeTags(ctx, true);
     },
+
+    exwordsset: async (ctx) => {
+      await setExcludeWords(ctx);
+    },
+    exwords: async (ctx) => {
+      const userId = ctx.update.message.from.id;
+      if (!mapUserIdToState[userId]?.excludeWords) {
+        mapUserIdToState[userId].excludeWords = [];
+      }
+
+      ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
+      if (mapUserIdToState[userId].excludeWords.length === 0) {
+        ctx.replyWithMarkdown(
+          'Ваш список исключаемых слов пуст. Вы можете добавить их командой */exwordsset*'
+        );
+        return;
+      }
+      const wordsStr = mapUserIdToState[userId].excludeWords
+        // eslint-disable-next-line prettier/prettier
+        .map((word) => `  \`#${word.replace(markdownRegexp, '$1')}\``)
+        .join('\n');
+
+      ctx.replyWithMarkdown(
+        `*Ваши исключаемые слова:*\n${wordsStr}\n\nВы можете добавить в список ещё */exwordsadd* (или задать заново */exwordsset*)`,
+        { disable_web_page_preview: true }
+      );
+    },
+    exwordsadd: async (ctx) => {
+      await setExcludeWords(ctx, true);
+    },
+
     get: async (ctx) => {
       await getVacancy(ctx);
     },
@@ -318,8 +408,8 @@ const handlers = {
       console.log('user id', userId, 'unsub success');
     },
   },
-  on: {
-    text: async (ctx) => {
+  onEvent: {
+    textH: async (ctx) => {
       const userId = ctx.update.message.from.id;
       const isRss = mapUserIdToState[userId]?.rssMessageID;
 
@@ -333,20 +423,40 @@ const handlers = {
     },
     poll_answer: (ctx) => {
       const { poll_answer: poll } = ctx.update;
+
       if (poll.user.is_bot) {
         return;
       }
-      if (!mapUserIdToState[poll.user.id]?.pollOptions) {
+      const userId = poll.user.id;
+
+      if (mapUserIdToState[userId]?.pollOptionsExTags?.[poll.poll_id]) {
+        if (!mapUserIdToState[userId]?.pollOptionsExTags) {
+          return;
+        }
+        const excludeTags = poll.option_ids.map(
+          (index) => mapUserIdToState[userId].pollOptionsExTags[poll.poll_id][index]
+        );
+        mapUserIdToState[userId].excludeTags = [
+          ...mapUserIdToState[userId].excludeTags,
+          ...excludeTags,
+        ];
+        console.log('excludeTags updated', mapUserIdToState[userId].excludeTags);
         return;
       }
-      const excludeTags = poll.option_ids.map(
-        (index) => mapUserIdToState[poll.user.id].pollOptions[poll.poll_id][index]
-      );
-      mapUserIdToState[poll.user.id].excludeTags = [
-        ...mapUserIdToState[poll.user.id].excludeTags,
-        ...excludeTags,
-      ];
-      console.log(mapUserIdToState[poll.user.id].excludeTags);
+
+      if (mapUserIdToState[userId]?.pollOptionsExWords?.[poll.poll_id]) {
+        if (!mapUserIdToState[userId]?.pollOptionsExWords) {
+          return;
+        }
+        const excludeWords = poll.option_ids.map(
+          (index) => mapUserIdToState[userId].pollOptionsExWords[poll.poll_id][index]
+        );
+        mapUserIdToState[userId].excludeWords = [
+          ...mapUserIdToState[userId].excludeWords,
+          ...excludeWords,
+        ];
+        console.log('excludeWords updated', mapUserIdToState[userId].excludeWords);
+      }
     },
   },
 };
