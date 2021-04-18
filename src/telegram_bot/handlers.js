@@ -265,7 +265,7 @@ const handlers = {
       }
       const tagsStr = mapUserIdToState[userId].excludeTags
         // eslint-disable-next-line prettier/prettier
-        .map((tag) => `  \`#${tag.replace(markdownRegexp, '\$1')}\``)
+        .map((tag) => `  \`#${tag.replace(markdownRegexp, '$1')}\``)
         .join('\n');
 
       ctx.replyWithMarkdown(

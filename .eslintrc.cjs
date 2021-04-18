@@ -11,8 +11,9 @@ module.exports = {
   parserOptions: {
     ecmaVersion: 11,
     sourceType: 'module',
+    requireConfigFile: false,
   },
-  parser: 'babel-eslint',
+  parser: '@babel/eslint-parser',
   rules: {
     'import/extensions': 0,
     'no-underscore-dangle': [2, { allow: ['__filename', '__dirname'] }],
