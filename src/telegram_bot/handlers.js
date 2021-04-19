@@ -241,7 +241,7 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false) => {
   try {
     const { hashes, vacanciesFiltered, getStringifyVacancies } = await getRss(
       rss,
-      3,
+      isFirstSub ? 7 : 4,
       mapUserIdToState[userId].excludeTags
     );
     console.log('вакансии получены', vacanciesFiltered.length);
@@ -255,6 +255,7 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false) => {
       return;
     }
 
+    console.log('getVacancySub получены новые вакансии -', newHashes.length);
     for (const newVac of newHashes) {
       mapUserIdToState[userId].hashes.add(newVac);
     }

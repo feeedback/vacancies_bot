@@ -53,8 +53,8 @@ export const getVacancyByFilterFromRssHabrCareer = async (filterParam, fromDayAg
       feed = cache.get(keyCache);
     } else {
       feed = await rss.parseURL(urlRss.toString());
-      if (page <= 4) {
-        cache.set(keyCache, feed, 1000 * 60 * 3 * page); // 3/6/9/12 минут
+      if (page <= 5) {
+        cache.set(keyCache, feed, 1000 * 60 * 2 * page); // 2/4/6/8//10 минут
       } else {
         cache.set(keyCache, feed); // 5 hour
       }
