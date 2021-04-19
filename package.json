@@ -27,6 +27,7 @@
     "dayjs": "^1.10.4",
     "dotenv": "^8.2.0",
     "lodash": "^4.17.21",
+    "lru-cache": "^6.0.0",
     "markdown-escapes": "^2.0.0",
     "qs": "^6.5.2",
     "rss-parser": "^3.12.0",

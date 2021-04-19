@@ -5,6 +5,8 @@ import qs from 'qs';
 import _ from 'lodash';
 import dayjs from 'dayjs';
 import dayjsRelativeTime from 'dayjs/plugin/relativeTime.js';
+import LRU from 'lru-cache';
+
 import { delayMs, getHashByStr } from '../utils/utils.js';
 import {
   mapCurrencyCodeToSymbol,
@@ -12,6 +14,11 @@ import {
   getNumberFromCurrency,
   convertCurrency,
 } from '../utils/api_currency.js';
+
+export const cache = new LRU({
+  max: 2000,
+  maxAge: 1000 * 60 * 60 * 5, // 5 hours
+});
 
 dayjs.extend(dayjsRelativeTime);
 
@@ -28,6 +35,8 @@ export const getVacancyByFilterFromRssHabrCareer = async (filterParam, fromDayAg
   const urlRss = new URL(
     `${HABR_CAREER_URL_RSS}?${qs.stringify(filter, { arrayFormat: 'brackets' })}`
   );
+  urlRss.searchParams.set('sort', 'date');
+
   let vacancyCount = Infinity;
   let isOlderThanFromDayAgo = false;
   let page = 1;
@@ -35,9 +44,23 @@ export const getVacancyByFilterFromRssHabrCareer = async (filterParam, fromDayAg
 
   while (vacancyCount && !isOlderThanFromDayAgo) {
     urlRss.searchParams.set('page', page);
-    console.log(decodeURI(urlRss));
+    const keyCache = decodeURI(urlRss);
+    console.log(keyCache);
 
-    const feed = await rss.parseURL(urlRss.toString());
+    let feed = null;
+
+    if (cache.has(keyCache)) {
+      feed = cache.get(keyCache);
+    } else {
+      feed = await rss.parseURL(urlRss.toString());
+      if (page <= 4) {
+        cache.set(keyCache, feed, 1000 * 60 * 3 * page); // 3/6/9/12 минут
+      } else {
+        cache.set(keyCache, feed); // 5 hour
+      }
+      await delayMs(3000);
+    }
+
     vacancyCount = feed.items.length;
 
     if (feed.items.length) {
@@ -48,8 +71,6 @@ export const getVacancyByFilterFromRssHabrCareer = async (filterParam, fromDayAg
       vacancies.push(...feed.items);
       page += 1;
     }
-
-    await delayMs(2000);
   }
 
   return vacancies

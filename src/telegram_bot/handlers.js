@@ -239,7 +239,7 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false) => {
   try {
     const { hashes, vacanciesFiltered, getStringifyVacancies } = await getRss(
       rss,
-      2,
+      3,
       mapUserIdToState[userId].excludeTags
     );
     console.log('вакансии получены', vacanciesFiltered.length);
@@ -399,6 +399,7 @@ export const getHandlers = (
       const userId = ctx.update.message.from.id;
       const chatId = ctx.update.message.chat.id;
       const rss = mapUserIdToState[userId]?.rss;
+
       ctx.telegram.sendChatAction(chatId, 'typing');
 
       if (!rss) {
@@ -419,7 +420,7 @@ export const getHandlers = (
       mapUserIdToState[userId].subIntervalId = setTimeout(() => {
         getVacancySub(bot, chatId, userId);
         // }, 1000 * 60 * 60 * 1 / 2); // раз в полчаса
-      }, 1000 * 60 * 5); // раз в 5 минуту
+      }, 1000 * 60 * 5); // раз в 5 минуты
       // }, 1000 * 20); // раз в 30 сек
 
       ctx.replyWithMarkdown(

@@ -16,7 +16,7 @@ const getRss = async (
   vacancyExcludeWordsInDesc = vacancyExcludeWordsInDescMy
 ) => {
   const vacanciesRaw = await getVacancyByFilterFromRssHabrCareer(url, day);
-  const { rates } = await getCurrencyRates(true); // TODO если timestamp не сегодня, запрашивать, если сегодня- брать из кэша
+  const rates = await getCurrencyRates();
   const { vacanciesFiltered, vacancies } = await parseFilterFormatVacancies(
     vacanciesRaw,
     'RUB',
