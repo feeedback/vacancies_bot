@@ -216,11 +216,10 @@ export const getStringifyVacancies = (vacanciesFiltered) => {
         .replace(regExpPatternContentVacancy, '')
         .replace(/ Требуемые навыки:.*$/, '');
 
-      const tagsStr = tags.map((tag) => `\`#${tag}\``).join(', ');
-      return `*${fork}* (~${avgUSD} $) | ${ago} | "${author}" | *"${titleShort}"* | _${contentFormat}_ ${tagsStr}\n${link}`;
+      const tagsStr = tags.map((tag) => `_#${tag}_`).join(', ');
+      return `${fork} (~${avgUSD} $) | ${ago} | «${author}» | *«${titleShort}»* | _${contentFormat}_ ${tagsStr}\n${link}`;
     }
   );
-
   return stringVacancies;
 };
 
