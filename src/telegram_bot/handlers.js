@@ -5,6 +5,7 @@ import _ from 'lodash';
 import { markdownEscapes } from 'markdown-escapes';
 import getRss from '../habr_career/index.js';
 import { botStartMessage, commandDescription, initStateUsers } from './settings.js';
+import { nowMsDate } from '../utils/utils.js';
 
 const markdownRegexp = new RegExp(`([${markdownEscapes.join('')}])`);
 
@@ -213,6 +214,7 @@ const getVacancy = async (ctx) => {
 };
 
 const getVacancySub = async (bot, chatId, userId, isFirstSub = false) => {
+  console.log('\n', nowMsDate(), getVacancySub);
   // const userId = ctx.update.message.from.id;
   const rss = mapUserIdToState[userId]?.rss;
 
@@ -247,6 +249,9 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false) => {
 
     if (!newHashes.length) {
       console.log('getVacancySub нет новых вакансий');
+      mapUserIdToState[userId].subIntervalId = setTimeout(() => {
+        getVacancySub(bot, chatId, userId);
+      }, 1000 * 60 * 5); // раз в 5 минуту
       return;
     }
 
@@ -284,8 +289,7 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false) => {
 
     mapUserIdToState[userId].subIntervalId = setTimeout(() => {
       getVacancySub(bot, chatId, userId);
-      // }, 1000 * 60 * 60 * 1 / 2); // раз в полчаса
-    }, 1000 * 60 * 5); // раз в 5 минуту
+    }, 1000 * 30); // раз в 5 минуту
   } catch (error) {
     console.log(error);
   }
@@ -414,19 +418,17 @@ export const getHandlers = (
         return;
       }
 
-      mapUserIdToState[userId].isSub = true;
-      getVacancySub(bot, chatId, userId, true);
-
-      mapUserIdToState[userId].subIntervalId = setTimeout(() => {
-        getVacancySub(bot, chatId, userId);
-        // }, 1000 * 60 * 60 * 1 / 2); // раз в полчаса
-      }, 1000 * 60 * 5); // раз в 5 минуты
-      // }, 1000 * 20); // раз в 30 сек
-
       ctx.replyWithMarkdown(
         'Вы успешно *подписаны* на уведомления о новых вакансий!\nОтписаться можно командой */unsub*'
       );
       console.log('user id', userId, 'sub success');
+      mapUserIdToState[userId].isSub = true;
+      await getVacancySub(bot, chatId, userId, true);
+
+      mapUserIdToState[userId].subIntervalId = setTimeout(() => {
+        getVacancySub(bot, chatId, userId);
+      }, 1000 * 60 * 5); // раз в 5 минуты
+      // }, 1000 * 20); // раз в 30 сек
     },
     unsub: async (ctx) => {
       const userId = ctx.update.message.from.id;

@@ -15,6 +15,7 @@ const getRss = async (
   vacancyExcludeTags = vacancyExcludeTagsMy,
   vacancyExcludeWordsInDesc = vacancyExcludeWordsInDescMy
 ) => {
+  const logT = Date.now();
   const vacanciesRaw = await getVacancyByFilterFromRssHabrCareer(url, day);
   const rates = await getCurrencyRates();
   const { vacanciesFiltered, vacancies } = await parseFilterFormatVacancies(
@@ -36,6 +37,7 @@ const getRss = async (
   const topWordsByCountByFiltered = getTopWordByCount(vacanciesFiltered);
 
   const hashes = vacanciesFiltered.map(({ hashContent }) => hashContent);
+  console.log('getRss', Date.now() - logT, 'ms');
   return {
     stringVacancies,
     hashes,
