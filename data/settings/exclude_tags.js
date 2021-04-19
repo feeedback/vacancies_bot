@@ -17,7 +17,7 @@ export default [
   'extjs',
   'symfony',
   'yiiframework',
-  'java',
+  // 'java',
 
   'Angular',
   'rubyonrails',

@@ -6,7 +6,7 @@ import currencyFormatter from 'currency-formatter';
 // import dayjs from 'dayjs';
 import LRU from 'lru-cache';
 
-import currencySymbols from '../../data/currency.js';
+import currencySymbols from '../../data/currency_symbols.js';
 
 const cache = new LRU({
   max: 1,
