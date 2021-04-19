@@ -157,6 +157,7 @@ const setExcludeWords = async (ctx, isSaveOld = false) => {
 };
 
 const getVacancy = async (ctx) => {
+  console.log('\n', nowMsDate(), getVacancy);
   const userId = ctx.update.message.from.id;
   const rss = mapUserIdToState[userId]?.rss;
 
@@ -178,7 +179,7 @@ const getVacancy = async (ctx) => {
   if (!dayRaw) {
     day = 2;
   }
-  ctx.reply('Идет обработка вакансий, пожалуйста, подождите несколько секунд...');
+  // await ctx.reply('Идет обработка вакансий, пожалуйста, подождите несколько секунд...');
   ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
 
   try {
@@ -192,25 +193,30 @@ const getVacancy = async (ctx) => {
 
     if (Buffer.byteLength(message, 'utf8') >= 4096) {
       for (const messageChunk of _.chunk(stringVacancies, 10)) {
+        ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
         await ctx.reply(messageChunk.join('\n\n'), {
           disable_web_page_preview: true,
           webhookReply: false,
           disable_notification: true,
+          parse_mode: 'Markdown',
         });
       }
       ctx.telegram.webhookReply = true;
       return;
     }
-    ctx.reply(message, {
+    await ctx.reply(message, {
       disable_web_page_preview: true,
       disable_notification: true,
+      parse_mode: 'Markdown',
     });
+
+    ctx.telegram.webhookReply = true;
   } catch (error) {
     console.log(error);
   }
 
-  const tempMessageId = ctx.message.message_id + 1;
-  ctx.deleteMessage(tempMessageId);
+  // const tempMessageId = ctx.message.message_id + 1;
+  // ctx.deleteMessage(tempMessageId);
 };
 
 const getVacancySub = async (bot, chatId, userId, isFirstSub = false) => {
@@ -276,6 +282,7 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false) => {
       for (const messageChunk of _.chunk(newVacanciesStr, 10)) {
         await bot.telegram.sendMessage(chatId, messageChunk.join('\n\n'), {
           disable_web_page_preview: true,
+          parse_mode: 'Markdown',
           // disable_notification: true,
           // webhookReply: false,
         });
@@ -284,6 +291,7 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false) => {
     } else {
       bot.telegram.sendMessage(chatId, message, {
         disable_web_page_preview: true,
+        parse_mode: 'Markdown',
         // disable_notification: true,
       });
     }

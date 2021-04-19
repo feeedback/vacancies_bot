@@ -87,7 +87,7 @@ export const getVacancyByFilterFromRssHabrCareer = async (filterParam, fromDayAg
 };
 
 const TAGS_START_TITLE = 'Требуемые навыки: ';
-const regExpPatternContentVacancy = /( (?:(?:от)\s+(?:(?:\d[\s\d]*\d)+)\s+[^\s]{1,4}\s*)(?:(?:до)\s*(?:(?:\d[\s\d]*\d)+)\s*[^\s]{1,4})){1}|( (?:(?:от)\s+(?:(?:\d[\s\d]*\d)+)\s+[^\s]{1,4}\s*)|(?:(?:до)\s*(?:(?:\d[\s\d]*\d)+)\s*[^\s]{1,4})){1}/i;
+const regExpPatternContentVacancy = /((?:(?:от)\s+(?:(?:\d[\s\d]*\d)+)\s+[^\s]{1,4}\s*)(?:(?:до)\s*(?:(?:\d[\s\d]*\d)+)\s*[^\s]{1,4})){1}|((?:(?:от)\s+(?:(?:\d[\s\d]*\d)+)\s+[^\s]{1,4}\s*)|(?:(?:до)\s*(?:(?:\d[\s\d]*\d)+)\s*[^\s]{1,4})){1}/i;
 
 const parseSalaryFromTitle = (stringTitleVacancy, baseCurrency, rates) => {
   const USD = 'USD';
@@ -210,16 +210,14 @@ export const parseFilterFormatVacancies = async (
 
 export const getStringifyVacancies = (vacanciesFiltered) => {
   const stringVacancies = vacanciesFiltered.map(
-    ({ content, ago, salary: { fork, avgUSD }, link }) => {
+    ({ content, author, titleShort, ago, salary: { fork, avgUSD }, link, tags }) => {
       const contentFormat = content
-        .replace('Компания ', '')
-        .replace(' ищет хорошего специалиста на вакансию ', ' | ')
+        .replace(/.+»\. /, '')
         .replace(regExpPatternContentVacancy, '')
-        .replace('». ', '» | ')
-        .replace(' Требуемые навыки: ', ' | ')
-        .replace(/\.+$/g, '');
+        .replace(/ Требуемые навыки:.*$/, '');
 
-      return `${fork} (~${avgUSD} $) | ${ago} | ${contentFormat} \n${link}`;
+      const tagsStr = tags.map((tag) => `\`#${tag}\``).join(', ');
+      return `*${fork}* (~${avgUSD} $) | ${ago} | "${author}" | *"${titleShort}"* | _${contentFormat}_ ${tagsStr}\n${link}`;
     }
   );
 
