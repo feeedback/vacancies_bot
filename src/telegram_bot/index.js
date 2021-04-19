@@ -1,8 +1,10 @@
+// @-ts-check
 import 'dotenv/config.js';
 import { Telegraf } from 'telegraf';
-import { handlers, unsubAll } from './handlers.js';
+import { getHandlers, unsubAll } from './handlers.js';
 
 const bot = new Telegraf(process.env.TELEGRAM_BOT_API);
+const handlers = getHandlers(bot);
 
 bot.start(handlers.start);
 bot.settings(handlers.settings);
@@ -26,6 +28,9 @@ bot.command('sub', handlers.command.sub); //
 bot.command('unsub', handlers.command.unsub); //
 
 bot.command('get', handlers.command.get);
+// bot.context.reply()
+// bot.telegram.sendMessage('1', { parse_mode: 'Markdown' });
+// Telegraf.reply()
 
 bot.on('text', handlers.onEvent.textH);
 bot.on('poll_answer', handlers.onEvent.poll_answer);

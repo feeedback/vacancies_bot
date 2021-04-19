@@ -1,3 +1,4 @@
+/* eslint-disable no-param-reassign */
 /* eslint-disable no-useless-escape */
 import { URL } from 'url';
 import _ from 'lodash';
@@ -8,6 +9,8 @@ import { botStartMessage, commandDescription, initStateUsers } from './settings.
 const markdownRegexp = new RegExp(`([${markdownEscapes.join('')}])`);
 
 export const mapUserIdToState = { ...initStateUsers };
+const sendMD = (bot, chatId, msg) =>
+  bot.telegram.sendMessage(chatId, msg, { parse_mode: 'Markdown' });
 
 const setRss = async (ctx, rss) => {
   let isValidURL = rss.startsWith('https://career.habr.com/vacancies/rss');
@@ -152,7 +155,7 @@ const setExcludeWords = async (ctx, isSaveOld = false) => {
   ctx.telegram.webhookReply = true;
 };
 
-const getVacancy = async (ctx, isSub = false, isFirstSub = false) => {
+const getVacancy = async (ctx) => {
   const userId = ctx.update.message.from.id;
   const rss = mapUserIdToState[userId]?.rss;
 
@@ -167,57 +170,6 @@ const getVacancy = async (ctx, isSub = false, isFirstSub = false) => {
     ctx.replyWithMarkdown(
       '_Ваш список исключаемых тегов пуст. Вы можете добавить их командой */extagsset*_'
     );
-  }
-  if (isSub) {
-    if (!mapUserIdToState[userId].hashes) {
-      mapUserIdToState[userId].hashes = new Set();
-    }
-    const existHashes = mapUserIdToState[userId].hashes;
-    try {
-      const { hashes, vacanciesFiltered, getStringifyVacancies } = await getRss(
-        rss,
-        2,
-        mapUserIdToState[userId].excludeTags
-      );
-      console.log('вакансии получены', vacanciesFiltered.length);
-      const newHashes = hashes.filter((vac) => !existHashes.has(vac));
-
-      if (!newHashes.length) {
-        console.log('нет новых вакансий');
-        return;
-      }
-
-      for (const newVac of newHashes) {
-        mapUserIdToState[userId].hashes.add(newVac);
-      }
-      if (isFirstSub) {
-        ctx.telegram.webhookReply = true;
-        return;
-      }
-      ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
-
-      const newVacancy = newHashes.map((hash) =>
-        vacanciesFiltered.find(({ hashContent }) => hashContent === hash)
-      );
-      const newVacanciesStr = getStringifyVacancies(newVacancy);
-      const message = newVacanciesStr.join('\n\n');
-
-      if (Buffer.byteLength(message, 'utf8') >= 4096) {
-        for (const messageChunk of _.chunk(newVacanciesStr, 10)) {
-          await ctx.reply(messageChunk.join('\n\n'), {
-            disable_web_page_preview: true,
-            webhookReply: false,
-            disable_notification: true,
-          });
-        }
-        ctx.telegram.webhookReply = true;
-        return;
-      }
-      ctx.reply(message, { disable_web_page_preview: true, disable_notification: true });
-    } catch (error) {
-      console.log(error);
-    }
-    return;
   }
 
   const dayRaw = ctx.update.message.text.slice(5).trim();
@@ -260,7 +212,87 @@ const getVacancy = async (ctx, isSub = false, isFirstSub = false) => {
   ctx.deleteMessage(tempMessageId);
 };
 
-export const handlers = {
+const getVacancySub = async (bot, chatId, userId, isFirstSub = false) => {
+  // const userId = ctx.update.message.from.id;
+  const rss = mapUserIdToState[userId]?.rss;
+
+  if (!rss) {
+    sendMD(bot, chatId, 'RSS not found! Please add that with */rss* [link]');
+    console.log('user id', userId, 'not found rss');
+    return;
+  }
+  bot.telegram.webhookReply = false;
+
+  if (!mapUserIdToState[userId].excludeTags.length === 0) {
+    sendMD(
+      bot,
+      chatId,
+      '_Ваш список исключаемых тегов пуст. Вы можете добавить их командой */extagsset*_'
+    );
+  }
+
+  if (!mapUserIdToState[userId].hashes) {
+    mapUserIdToState[userId].hashes = new Set();
+  }
+  const existHashes = mapUserIdToState[userId].hashes;
+
+  try {
+    const { hashes, vacanciesFiltered, getStringifyVacancies } = await getRss(
+      rss,
+      2,
+      mapUserIdToState[userId].excludeTags
+    );
+    console.log('вакансии получены', vacanciesFiltered.length);
+    const newHashes = hashes.filter((vac) => !existHashes.has(vac));
+
+    if (!newHashes.length) {
+      console.log('нет новых вакансий');
+      return;
+    }
+
+    for (const newVac of newHashes) {
+      mapUserIdToState[userId].hashes.add(newVac);
+    }
+    if (isFirstSub) {
+      bot.telegram.webhookReply = true;
+      return;
+    }
+    bot.telegram.sendChatAction(chatId, 'typing');
+
+    const newVacancy = newHashes.map((hash) =>
+      vacanciesFiltered.find(({ hashContent }) => hashContent === hash)
+    );
+    const newVacanciesStr = getStringifyVacancies(newVacancy);
+    const message = newVacanciesStr.join('\n\n');
+
+    if (Buffer.byteLength(message, 'utf8') >= 4096) {
+      for (const messageChunk of _.chunk(newVacanciesStr, 10)) {
+        await bot.telegram.sendMessage(chatId, messageChunk.join('\n\n'), {
+          disable_web_page_preview: true,
+          // disable_notification: true,
+          // webhookReply: false,
+        });
+      }
+      bot.telegram.webhookReply = true;
+    } else {
+      bot.telegram.sendMessage(chatId, message, {
+        disable_web_page_preview: true,
+        // disable_notification: true,
+      });
+    }
+
+    mapUserIdToState[userId].subIntervalId = setTimeout(() => {
+      getVacancySub(bot, chatId, userId);
+      // }, 1000 * 60 * 60 * 1 / 2); // раз в полчаса
+    }, 1000 * 60 * 5); // раз в 5 минуту
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const getHandlers = (
+  /** @type {Telegraf<import("telegraf").Context<import("typegram").Update>>} */ bot
+) => ({
   use: [
     async (ctx, next) => {
       const d = Date.now();
@@ -364,6 +396,7 @@ export const handlers = {
     },
     sub: async (ctx) => {
       const userId = ctx.update.message.from.id;
+      const chatId = ctx.update.message.chat.id;
       const rss = mapUserIdToState[userId]?.rss;
 
       if (!rss) {
@@ -371,11 +404,11 @@ export const handlers = {
         console.log('user id', userId, 'not found rss');
         return;
       }
-      ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
-      await getVacancy(ctx, true, true);
+      ctx.telegram.sendChatAction(chatId, 'typing');
+      getVacancySub(bot, chatId, userId, true);
 
-      mapUserIdToState[userId].subIntervalId = setInterval(() => {
-        getVacancy(ctx, true);
+      mapUserIdToState[userId].subIntervalId = setTimeout(() => {
+        getVacancySub(bot, chatId, userId);
         // }, 1000 * 60 * 60 * 1 / 2); // раз в полчаса
       }, 1000 * 60 * 5); // раз в 5 минуту
       // }, 1000 * 20); // раз в 30 сек
@@ -452,7 +485,7 @@ export const handlers = {
       }
     },
   },
-};
+});
 
 export const unsubAll = () => {
   const intervalIds = Object.values(mapUserIdToState)
