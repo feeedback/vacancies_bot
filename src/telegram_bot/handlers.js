@@ -219,7 +219,7 @@ const getVacancy = async (ctx) => {
   // ctx.deleteMessage(tempMessageId);
 };
 
-const getVacancySub = async (bot, chatId, userId, isFirstSub = false) => {
+const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPingMs) => {
   console.log('\n', nowMsDate(), getVacancySub);
   // const userId = ctx.update.message.from.id;
   const rss = mapUserIdToState[userId]?.rss;
@@ -230,6 +230,15 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false) => {
     return;
   }
   bot.telegram.webhookReply = false;
+
+  if (!mapUserIdToState[userId].subIntervalId) {
+    mapUserIdToState[userId].subIntervalId = [];
+  }
+  mapUserIdToState[userId].subIntervalId.push(
+    setTimeout(async () => {
+      await getVacancySub(bot, chatId, userId, false, intervalPingMs);
+    }, intervalPingMs)
+  ); // раз в 5 минуту
 
   if (!mapUserIdToState[userId].excludeTags.length === 0) {
     sendMD(
@@ -255,9 +264,6 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false) => {
 
     if (!newHashes.length) {
       console.log('getVacancySub нет новых вакансий');
-      mapUserIdToState[userId].subIntervalId = setTimeout(() => {
-        getVacancySub(bot, chatId, userId);
-      }, 1000 * 60 * 5); // раз в 5 минуту
       return;
     }
 
@@ -268,6 +274,7 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false) => {
     if (isFirstSub) {
       console.log('getVacancySub isFirstSub -> return');
       bot.telegram.webhookReply = true;
+
       return;
     }
     bot.telegram.sendChatAction(chatId, 'typing');
@@ -295,10 +302,6 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false) => {
         // disable_notification: true,
       });
     }
-
-    mapUserIdToState[userId].subIntervalId = setTimeout(() => {
-      getVacancySub(bot, chatId, userId);
-    }, 1000 * 30); // раз в 5 минуту
   } catch (error) {
     console.log(error);
   }
@@ -432,12 +435,7 @@ export const getHandlers = (
       );
       console.log('user id', userId, 'sub success');
       mapUserIdToState[userId].isSub = true;
-      await getVacancySub(bot, chatId, userId, true);
-
-      mapUserIdToState[userId].subIntervalId = setTimeout(() => {
-        getVacancySub(bot, chatId, userId);
-      }, 1000 * 60 * 5); // раз в 5 минуты
-      // }, 1000 * 20); // раз в 30 сек
+      await getVacancySub(bot, chatId, userId, true, 1000 * 60 * 5);
     },
     unsub: async (ctx) => {
       const userId = ctx.update.message.from.id;
@@ -447,8 +445,10 @@ export const getHandlers = (
         console.log('user id', userId, 'not found sub id');
         return;
       }
-      const subId = mapUserIdToState[userId].subIntervalId;
-      clearInterval(subId);
+
+      for (const subId of mapUserIdToState[userId].subIntervalId) {
+        clearInterval(subId);
+      }
       mapUserIdToState[userId].isSub = false;
 
       ctx.replyWithMarkdown(
