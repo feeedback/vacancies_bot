@@ -246,7 +246,7 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false) => {
     const newHashes = hashes.filter((vac) => !existHashes.has(vac));
 
     if (!newHashes.length) {
-      console.log('нет новых вакансий');
+      console.log('getVacancySub нет новых вакансий');
       return;
     }
 
@@ -254,6 +254,7 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false) => {
       mapUserIdToState[userId].hashes.add(newVac);
     }
     if (isFirstSub) {
+      console.log('getVacancySub isFirstSub -> return');
       bot.telegram.webhookReply = true;
       return;
     }
@@ -398,13 +399,21 @@ export const getHandlers = (
       const userId = ctx.update.message.from.id;
       const chatId = ctx.update.message.chat.id;
       const rss = mapUserIdToState[userId]?.rss;
+      ctx.telegram.sendChatAction(chatId, 'typing');
 
       if (!rss) {
         ctx.replyWithMarkdown('RSS not found! Please add that with */rss* [link]');
         console.log('user id', userId, 'not found rss');
         return;
       }
-      ctx.telegram.sendChatAction(chatId, 'typing');
+
+      if (mapUserIdToState[userId].isSub) {
+        ctx.replyWithMarkdown('Вы *уже подписаны*!\nОтписаться можно командой */unsub*');
+        console.log('user id', userId, 'sub fail - yet sub');
+        return;
+      }
+
+      mapUserIdToState[userId].isSub = true;
       getVacancySub(bot, chatId, userId, true);
 
       mapUserIdToState[userId].subIntervalId = setTimeout(() => {
@@ -416,18 +425,20 @@ export const getHandlers = (
       ctx.replyWithMarkdown(
         'Вы успешно *подписаны* на уведомления о новых вакансий!\nОтписаться можно командой */unsub*'
       );
+      console.log('user id', userId, 'sub success');
     },
     unsub: async (ctx) => {
       const userId = ctx.update.message.from.id;
-      const subId = mapUserIdToState[userId]?.subIntervalId;
 
-      if (!subId) {
+      if (!mapUserIdToState[userId].isSub) {
         ctx.replyWithMarkdown('Вы не подписаны!\nПодписаться можно командой */sub*');
         console.log('user id', userId, 'not found sub id');
         return;
       }
-
+      const subId = mapUserIdToState[userId].subIntervalId;
       clearInterval(subId);
+      mapUserIdToState[userId].isSub = false;
+
       ctx.replyWithMarkdown(
         'Вы успешно *отписаны* от уведомления о новых вакансий!\nПодписаться снова можно командой */sub*'
       );
