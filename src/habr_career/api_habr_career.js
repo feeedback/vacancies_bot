@@ -196,7 +196,7 @@ export const parseFilterFormatVacancies = async (
         0
       );
       const countBadWord = vacancyExcludeWordsInDescLC.reduce(
-        (sum, badTag) => sum + _.words(titleShort.toLowerCase()).includes(badTag),
+        (sum, badWord) => sum + _.words(titleShort.toLowerCase()).includes(badWord),
         0
       );
       // console.log('countBadTag <= maxCountIncludesBadTag', { countBadTag, maxCountIncludesBadTag });

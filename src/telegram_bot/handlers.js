@@ -31,9 +31,6 @@ const setRss = async (ctx, rss) => {
   }
 
   const userId = ctx.update.message.from.id;
-  if (!mapUserIdToState[userId]) {
-    mapUserIdToState[userId] = {};
-  }
 
   mapUserIdToState[userId].rss = rss;
   await ctx.reply('Saved your RSS successful!');
@@ -42,16 +39,9 @@ const setRss = async (ctx, rss) => {
 
 const setExcludeTags = async (ctx, isSaveOld = false) => {
   const userId = ctx.update.message.from.id;
-  if (!mapUserIdToState[userId]) {
-    mapUserIdToState[userId] = {};
-  }
   if (!mapUserIdToState[userId].rss) {
     ctx.replyWithMarkdown('Для начала установите RSS ссылку, командой */rss*');
     return;
-  }
-
-  if (!mapUserIdToState[userId]?.excludeTags) {
-    mapUserIdToState[userId].excludeTags = [];
   }
 
   if (!isSaveOld) {
@@ -64,7 +54,9 @@ const setExcludeTags = async (ctx, isSaveOld = false) => {
   await ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
   const { topTagsByCount, topTagsByCountByFiltered } = await getRss(
     mapUserIdToState[userId].rss,
-    10
+    20,
+    mapUserIdToState[userId].excludeTags,
+    mapUserIdToState[userId].excludeWords
   );
   // await ctx.poll([topTagsByCount]);
   // await ctx.telegram.sendPoll(ctx.chatId: string | number, question: string, options: topTagsByCount, extra ?: ExtraPoll)
@@ -74,9 +66,6 @@ const setExcludeTags = async (ctx, isSaveOld = false) => {
 
   const chunkedTags = _.chunk(topTags, 10);
 
-  if (!mapUserIdToState[userId].pollOptionsExTags) {
-    mapUserIdToState[userId].pollOptionsExTags = {};
-  }
   for (const pollOptionsExTags of chunkedTags) {
     if (pollOptionsExTags.length < 2) {
       break;
@@ -100,16 +89,9 @@ const setExcludeTags = async (ctx, isSaveOld = false) => {
 
 const setExcludeWords = async (ctx, isSaveOld = false) => {
   const userId = ctx.update.message.from.id;
-  if (!mapUserIdToState[userId]) {
-    mapUserIdToState[userId] = {};
-  }
   if (!mapUserIdToState[userId].rss) {
     ctx.replyWithMarkdown('Для начала установите RSS ссылку, командой */rss*');
     return;
-  }
-
-  if (!mapUserIdToState[userId]?.excludeWords) {
-    mapUserIdToState[userId].excludeWords = [];
   }
 
   if (!isSaveOld) {
@@ -122,7 +104,9 @@ const setExcludeWords = async (ctx, isSaveOld = false) => {
   await ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
   const { topWordsByCount, topWordsByCountByFiltered } = await getRss(
     mapUserIdToState[userId].rss,
-    10
+    20,
+    mapUserIdToState[userId].excludeTags,
+    mapUserIdToState[userId].excludeWords
   );
   // await ctx.poll([topTagsByCount]);
   // await ctx.telegram.sendPoll(ctx.chatId: string | number, question: string, options: topTagsByCount, extra ?: ExtraPoll)
@@ -186,7 +170,8 @@ const getVacancy = async (ctx) => {
     const { stringVacancies, vacanciesFiltered } = await getRss(
       rss,
       day,
-      mapUserIdToState[userId].excludeTags
+      mapUserIdToState[userId].excludeTags,
+      mapUserIdToState[userId].excludeWords
     );
     console.log('вакансии получены', vacanciesFiltered.length);
     const message = stringVacancies.join('\n\n');
@@ -231,9 +216,6 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
   }
   bot.telegram.webhookReply = false;
 
-  if (!mapUserIdToState[userId].subIntervalId) {
-    mapUserIdToState[userId].subIntervalId = [];
-  }
   mapUserIdToState[userId].subIntervalId.push(
     setTimeout(async () => {
       await getVacancySub(bot, chatId, userId, false, intervalPingMs);
@@ -248,16 +230,14 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
     );
   }
 
-  if (!mapUserIdToState[userId].hashes) {
-    mapUserIdToState[userId].hashes = new Set();
-  }
   const existHashes = mapUserIdToState[userId].hashes;
 
   try {
     const { hashes, vacanciesFiltered, getStringifyVacancies } = await getRss(
       rss,
       isFirstSub ? 7 : 4,
-      mapUserIdToState[userId].excludeTags
+      mapUserIdToState[userId].excludeTags,
+      mapUserIdToState[userId].excludeWords
     );
     console.log('вакансии получены', vacanciesFiltered.length);
     const newHashes = hashes.filter((vac) => !existHashes.has(vac));
@@ -324,7 +304,24 @@ export const getHandlers = (
       console.log('');
     },
   ],
-  start: (ctx) => ctx.replyWithMarkdown(botStartMessage.join('\n')),
+
+  start: (ctx) => {
+    const userId = ctx.update.message.from.id;
+    const userState = mapUserIdToState[userId];
+
+    if (!userState) {
+      mapUserIdToState[userId] = {};
+    }
+
+    mapUserIdToState[userId].excludeTags = userState.excludeTags ?? [];
+    mapUserIdToState[userId].excludeWords = userState.excludeWords ?? [];
+    mapUserIdToState[userId].subIntervalId = userState.subIntervalId ?? [];
+    mapUserIdToState[userId].hashes = userState.hashes ?? new Set();
+    mapUserIdToState[userId].pollOptionsExTags = userState.pollOptionsExTags ?? {};
+    mapUserIdToState[userId].pollOptionsExWords = userState.pollOptionsExWords ?? {};
+
+    ctx.replyWithMarkdown(botStartMessage.join('\n'));
+  },
   settings: async (ctx) => {
     await ctx.setMyCommands(commandDescription);
   },
@@ -353,9 +350,6 @@ export const getHandlers = (
     },
     extags: async (ctx) => {
       const userId = ctx.update.message.from.id;
-      if (!mapUserIdToState[userId]?.excludeTags) {
-        mapUserIdToState[userId].excludeTags = [];
-      }
 
       ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
       if (mapUserIdToState[userId].excludeTags.length === 0) {
@@ -383,9 +377,6 @@ export const getHandlers = (
     },
     exwords: async (ctx) => {
       const userId = ctx.update.message.from.id;
-      if (!mapUserIdToState[userId]?.excludeWords) {
-        mapUserIdToState[userId].excludeWords = [];
-      }
 
       ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
       if (mapUserIdToState[userId].excludeWords.length === 0) {
@@ -414,11 +405,10 @@ export const getHandlers = (
     sub: async (ctx) => {
       const userId = ctx.update.message.from.id;
       const chatId = ctx.update.message.chat.id;
-      const rss = mapUserIdToState[userId]?.rss;
 
       ctx.telegram.sendChatAction(chatId, 'typing');
 
-      if (!rss) {
+      if (!mapUserIdToState[userId].rss) {
         ctx.replyWithMarkdown('RSS not found! Please add that with */rss* [link]');
         console.log('user id', userId, 'not found rss');
         return;
@@ -478,10 +468,7 @@ export const getHandlers = (
       }
       const userId = poll.user.id;
 
-      if (mapUserIdToState[userId]?.pollOptionsExTags?.[poll.poll_id]) {
-        if (!mapUserIdToState[userId]?.pollOptionsExTags) {
-          return;
-        }
+      if (mapUserIdToState[userId].pollOptionsExTags[poll.poll_id]) {
         const excludeTags = poll.option_ids.map(
           (index) => mapUserIdToState[userId].pollOptionsExTags[poll.poll_id][index]
         );
@@ -493,10 +480,7 @@ export const getHandlers = (
         return;
       }
 
-      if (mapUserIdToState[userId]?.pollOptionsExWords?.[poll.poll_id]) {
-        if (!mapUserIdToState[userId]?.pollOptionsExWords) {
-          return;
-        }
+      if (mapUserIdToState[userId].pollOptionsExWords[poll.poll_id]) {
         const excludeWords = poll.option_ids.map(
           (index) => mapUserIdToState[userId].pollOptionsExWords[poll.poll_id][index]
         );

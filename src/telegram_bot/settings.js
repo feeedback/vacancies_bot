@@ -3,7 +3,7 @@ import vacancyExcludeTagsMy from '../../data/settings/exclude_tags.js';
 import vacancyExcludeWordsInDescMy from '../../data/settings/exclude_words_desc.js';
 
 export const botStartMessage = [
-  '*Здравствуйте!*\n',
+  '*Здравствуйте!* Бот позволяет гибко фильтровать и подписываться на новые вакансии!\n',
   '1. Для старта *установите RSS* ссылку с фильтром поиска командой */rss*',
 
   '2. *Установить* исключаемые *теги* командой */extagsset*',
