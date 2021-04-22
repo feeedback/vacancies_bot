@@ -17,7 +17,7 @@ import {
 
 export const cache = new LRU({
   max: 2000,
-  maxAge: 1000 * 60 * 60 * 5, // 5 hours
+  maxAge: 1000 * 60 * 60 * 24, // 24 hours
 });
 
 dayjs.extend(dayjsRelativeTime);
@@ -53,10 +53,10 @@ export const getVacancyByFilterFromRssHabrCareer = async (filterParam, fromDayAg
       feed = cache.get(keyCache);
     } else {
       feed = await rss.parseURL(urlRss.toString());
-      if (page <= 5) {
-        cache.set(keyCache, feed, 1000 * 60 * 2 * page); // 2/4/6/8//10 минут
+      if (page <= 7) {
+        cache.set(keyCache, feed, 1000 * 60 * (3 + 2 * page ** 2)); // 5/11/21/35/53/75/101 минут
       } else {
-        cache.set(keyCache, feed); // 5 hour
+        cache.set(keyCache, feed); // 24 hour
       }
       await delayMs(3000);
     }
