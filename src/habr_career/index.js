@@ -1,5 +1,5 @@
 import vacancyExcludeTagsMy from '../../data/settings/exclude_tags.js';
-import vacancyExcludeWordsInDescMy from '../../data/settings/exclude_words_desc.js';
+import vacancyExcludeWordsInDescMy from '../../data/settings/exclude_words_title.js';
 import {
   getVacancyByFilterFromRssHabrCareer,
   parseFilterFormatVacancies,
