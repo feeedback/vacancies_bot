@@ -10,6 +10,23 @@ import { nowMsDate } from '../utils/utils.js';
 const markdownRegexp = new RegExp(`([${markdownEscapes.join('')}])`);
 
 export const mapUserIdToState = { ...initStateUsers };
+
+const startingUserState = (userId) => {
+  const userState = mapUserIdToState[userId];
+
+  if (!userState) {
+    mapUserIdToState[userId] = {};
+  }
+
+  mapUserIdToState[userId].excludeTags = userState.excludeTags ?? [];
+  mapUserIdToState[userId].excludeWords = userState.excludeWords ?? [];
+  mapUserIdToState[userId].subIntervalId = userState.subIntervalId ?? [];
+  mapUserIdToState[userId].hashes = userState.hashes ?? new Set();
+  mapUserIdToState[userId].pollOptionsExTags = userState.pollOptionsExTags ?? {};
+  mapUserIdToState[userId].pollOptionsExWords = userState.pollOptionsExWords ?? {};
+  userState.isStarted = true;
+};
+
 const sendMD = (bot, chatId, msg) =>
   bot.telegram.sendMessage(chatId, msg, { parse_mode: 'Markdown' });
 
@@ -39,6 +56,9 @@ const setRss = async (ctx, rss) => {
 
 const setExcludeTags = async (ctx, isSaveOld = false) => {
   const userId = ctx.update.message.from.id;
+  if (!mapUserIdToState[userId]?.isStarted) {
+    startingUserState(userId);
+  }
   if (!mapUserIdToState[userId].rss) {
     ctx.replyWithMarkdown('Для начала установите RSS ссылку, командой */rss*');
     return;
@@ -143,6 +163,9 @@ const setExcludeWords = async (ctx, isSaveOld = false) => {
 const getVacancy = async (ctx) => {
   console.log('\n', nowMsDate(), getVacancy);
   const userId = ctx.update.message.from.id;
+  if (!mapUserIdToState[userId]?.isStarted) {
+    startingUserState(userId);
+  }
   const rss = mapUserIdToState[userId]?.rss;
 
   if (!rss) {
@@ -304,21 +327,9 @@ export const getHandlers = (
       console.log('');
     },
   ],
-
   start: (ctx) => {
     const userId = ctx.update.message.from.id;
-    const userState = mapUserIdToState[userId];
-
-    if (!userState) {
-      mapUserIdToState[userId] = {};
-    }
-
-    mapUserIdToState[userId].excludeTags = userState.excludeTags ?? [];
-    mapUserIdToState[userId].excludeWords = userState.excludeWords ?? [];
-    mapUserIdToState[userId].subIntervalId = userState.subIntervalId ?? [];
-    mapUserIdToState[userId].hashes = userState.hashes ?? new Set();
-    mapUserIdToState[userId].pollOptionsExTags = userState.pollOptionsExTags ?? {};
-    mapUserIdToState[userId].pollOptionsExWords = userState.pollOptionsExWords ?? {};
+    startingUserState(userId);
 
     ctx.replyWithMarkdown(botStartMessage.join('\n'));
   },
@@ -332,12 +343,16 @@ export const getHandlers = (
   },
   command: {
     rss: async (ctx) => {
+      const userId = ctx.update.message.from.id;
+      if (!mapUserIdToState[userId]?.isStarted) {
+        startingUserState(userId);
+      }
+
       if (ctx.update.message.text.trim() === '/rss') {
         const message = await ctx.reply(
           'Пожалуйста, скопируйте сюда RSS ссылку из поиска с Вашим фильтром из https://career.habr.com/vacancies',
           { disable_web_page_preview: true }
         );
-        const userId = ctx.update.message.from.id;
         mapUserIdToState[userId].rssMessageID = message.message_id;
         return;
       }
@@ -350,6 +365,9 @@ export const getHandlers = (
     },
     extags: async (ctx) => {
       const userId = ctx.update.message.from.id;
+      if (!mapUserIdToState[userId]?.isStarted) {
+        startingUserState(userId);
+      }
 
       ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
       if (mapUserIdToState[userId].excludeTags.length === 0) {
@@ -371,13 +389,14 @@ export const getHandlers = (
     extagsadd: async (ctx) => {
       await setExcludeTags(ctx, true);
     },
-
     exwordsset: async (ctx) => {
       await setExcludeWords(ctx);
     },
     exwords: async (ctx) => {
       const userId = ctx.update.message.from.id;
-
+      if (!mapUserIdToState[userId]?.isStarted) {
+        startingUserState(userId);
+      }
       ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
       if (mapUserIdToState[userId].excludeWords.length === 0) {
         ctx.replyWithMarkdown(
@@ -405,7 +424,9 @@ export const getHandlers = (
     sub: async (ctx) => {
       const userId = ctx.update.message.from.id;
       const chatId = ctx.update.message.chat.id;
-
+      if (!mapUserIdToState[userId]?.isStarted) {
+        startingUserState(userId);
+      }
       ctx.telegram.sendChatAction(chatId, 'typing');
 
       if (!mapUserIdToState[userId].rss) {
@@ -429,7 +450,9 @@ export const getHandlers = (
     },
     unsub: async (ctx) => {
       const userId = ctx.update.message.from.id;
-
+      if (!mapUserIdToState[userId]?.isStarted) {
+        startingUserState(userId);
+      }
       if (!mapUserIdToState[userId].isSub) {
         ctx.replyWithMarkdown('Вы не подписаны!\nПодписаться можно командой */sub*');
         console.log('user id', userId, 'not found sub id');
@@ -450,6 +473,9 @@ export const getHandlers = (
   onEvent: {
     textH: async (ctx) => {
       const userId = ctx.update.message.from.id;
+      if (!mapUserIdToState[userId]?.isStarted) {
+        startingUserState(userId);
+      }
       const isRss = mapUserIdToState[userId]?.rssMessageID;
 
       if (isRss) {
