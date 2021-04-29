@@ -20,6 +20,8 @@ export default [
   'HTML',
   'golang',
   'front-end',
+  'Vue',
+  'Frontend',
   'CSS',
   'Верстальщик',
   'android',
