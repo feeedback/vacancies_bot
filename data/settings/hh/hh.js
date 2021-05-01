@@ -1,4 +1,7 @@
 import dayjs from 'dayjs';
+import axios from 'axios';
+import qs from 'qs';
+import domVacanciesParser from './dom-parser.js';
 import { excludeWordTitle, excludeWordDesc, includeWordDesc } from './hh_words.js';
 
 const syntax = {
@@ -19,13 +22,13 @@ const searchText = syntax.ALL(inc, exTitle, exDesc);
 
 console.log(searchText);
 
-const BASE_URL = 'https://hh.ru/search/vacancy?';
-// qs.stringify({ a: ['b', 'c'] }, { arrayFormat: 'repeat' })
+const BASE_URL = 'https://hh.ru/search/vacancy';
 
 const filterVacanciesSearch = {
   L_is_autosearch: true,
   // date_from: '30.04.2021 10:51:11',
-  date_from: dayjs().subtract('5', 'minute').format('DD.MM.YYYY HH:mm:ss'), // last request time
+  // date_from: dayjs().subtract('5', 'minute').format('DD.MM.YYYY HH:mm:ss'), // last request time
+  date_from: dayjs().subtract('300', 'minute').format('DD.MM.YYYY HH:mm:ss'), // last request time
 
   salary: 40000,
   schedule: ['remote'],
@@ -37,3 +40,22 @@ const filterVacanciesSearch = {
   only_with_salary: true,
   text: searchText,
 };
+
+const getVacancies = async (filterParam) => {
+  let filter = filterParam;
+  if (typeof filter === 'string') {
+    filter = qs.parse(new URL(filter).search.slice(1));
+  }
+  // const url = new URL(`${BASE_URL}?${qs.stringify(filter, { arrayFormat: 'repeat' })}`);
+  const url = new URL(`${BASE_URL}`);
+
+  try {
+    const res = await axios.get(url.toString());
+    const vacancies = domVacanciesParser(res.data);
+    return vacancies;
+  } catch (error) {
+    console.log('error getVacancies', error);
+    throw error;
+  }
+};
+getVacancies(filterVacanciesSearch);
