@@ -1,89 +1,36 @@
-const includeWordDesc = '(js OR javascript OR node OR moleculer OR "node.js" OR nodejs)';
-const excludeWordDesc =
-  'NOT "C#" NOT "1C" NOT "1С" NOT "PHP" NOT OpenCart NOT "колл-центр" NOT "Оператор на телефон" NOT django NOT flask';
-
-const excludeWordTitleS =
-  'NOT writer NOT perl NOT тестированию NOT rails NOT senior NOT сеньор NOT Salesforce NOT руководитель NOT "Team Lead" NOT Ресёчер NOT Fullstack NOT фронтенд NOT Frontend NOT верстальщик NOT QA NOT RUST NOT React NOT рекламе NOT SQL NOT LUA NOT Копирайтер NOT Erlang NOT VueJs NOT Фотограф NOT HR NOT маркетингу NOT сотрудник NOT Бухгалтер NOT Юрист NOT пристав NOT сестра NOT воспитатель NOT врач NOT инспектор NOT администратор NOT техподдержки NOT ios NOT Android NOT Продавец NOT аналитик NOT sales NOT Golang NOT C++ NOT C NOT консультант NOT Artist NOT художник NOT рекрутер NOT дизайн NOT дизайну NOT модератор NOT преподаватель NOT поддержка NOT поддержки NOT контент NOT "Java" NOT Jira NOT Ruby NOT Менеджер NOT Маркетолог NOT senior NOT middle NOT дизайнер NOT тестировщик NOT Vue NOT python NOT Angular NOT DevOps NOT Senior NOT SMM NOT seo';
+import { excludeWordTitle, excludeWordDesc, includeWordDesc } from './hh_words.js';
 
 const syntax = {
-  AND: (wordsArr) => wordsArr.join(' AND '),
-  OR: (wordsArr) => wordsArr.join(' OR '),
+  AND: (...wordsArr) => wordsArr.join(' AND '),
+  OR: (...wordsArr) => wordsArr.join(' OR '),
   EXCLUDE: (wordsStr) => `NOT (${wordsStr})`,
   INCLUDE: (wordsStr) => `(${wordsStr})`,
   BY_TITLE: (wordsStr) => `NAME:(${wordsStr})`,
   BY_DESC: (wordsStr) => `DESCRIPTION:(${wordsStr})`,
+  ALL: (...str) => str.join(' '),
 };
-const excludeWordTitle = [
-  'writer',
-  'perl',
-  'тестированию',
-  'rails',
-  'senior',
-  'сеньор',
-  'Salesforce',
-  'руководитель',
-  '"Team Lead"',
-  'Ресёчер',
-  'Fullstack',
-  'фронтенд',
-  'Frontend',
-  'верстальщик',
-  'QA',
-  'RUST',
-  'React',
-  'рекламе',
-  'SQL',
-  'LUA',
-  'Копирайтер',
-  'Erlang',
-  'VueJs',
-  'Фотограф',
-  'HR',
-  'маркетингу',
-  'сотрудник',
-  'Бухгалтер',
-  'Юрист',
-  'пристав',
-  'сестра',
-  'воспитатель',
-  'врач',
-  'инспектор',
-  'администратор',
-  'техподдержки',
-  'ios',
-  'Android',
-  'Продавец',
-  'аналитик',
-  'sales',
-  'Golang',
-  'C++',
-  'C',
-  'консультант',
-  'Artist',
-  'художник',
-  'рекрутер',
-  'дизайн',
-  'дизайну',
-  'модератор',
-  'преподаватель',
-  'поддержка',
-  'поддержки',
-  'контент',
-  '"Java"',
-  'Jira',
-  'Ruby',
-  'Менеджер',
-  'Маркетолог',
-  'senior',
-  'middle',
-  'дизайнер',
-  'тестировщик',
-  'Vue',
-  'python',
-  'Angular',
-  'DevOps',
-  'Senior',
-  'SMM',
-  'seo',
-];
-const excludeWordTitleUnion = syntax.BY_TITLE(syntax.EXCLUDE(syntax.OR(excludeWordTitle)));
+
+const exTitle = syntax.BY_TITLE(syntax.EXCLUDE(syntax.OR(...excludeWordTitle)));
+const exDesc = syntax.BY_DESC(
+  syntax.AND(
+    syntax.INCLUDE(syntax.OR(...includeWordDesc)),
+    syntax.EXCLUDE(syntax.OR(...excludeWordDesc))
+  )
+);
+console.log(syntax.ALL(exTitle, exDesc));
+// const BASE_URL = 'https://hh.ru/search/vacancy?';
+// // qs.stringify({ a: ['b', 'c'] }, { arrayFormat: 'repeat' })
+// const filterVacanciesSearch = {
+//   L_is_autosearch: true,
+//   date_from: '30.04.2021 10:51:11',
+
+//   salary: 50000,
+//   schedule: ['remote'],
+//   employment: ['full', 'part', 'probation'],
+//   experience: ['between1And3'],
+//   order_by: 'publication_time',
+//   no_magic: true, // ???
+//   items_on_page: 100,
+//   only_with_salary: true,
+//   text: searchText,
+// };
