@@ -7,17 +7,15 @@ const syntax = {
   INCLUDE: (wordsStr) => `(${wordsStr})`,
   BY_TITLE: (wordsStr) => `NAME:(${wordsStr})`,
   BY_DESC: (wordsStr) => `DESCRIPTION:(${wordsStr})`,
+  BY_ALL: (wordsStr) => `(${wordsStr})`,
   ALL: (...str) => str.join(' '),
 };
 
 const exTitle = syntax.BY_TITLE(syntax.EXCLUDE(syntax.OR(...excludeWordTitle)));
-const exDesc = syntax.BY_DESC(
-  syntax.AND(
-    syntax.INCLUDE(syntax.OR(...includeWordDesc)),
-    syntax.EXCLUDE(syntax.OR(...excludeWordDesc))
-  )
-);
-console.log(syntax.ALL(exTitle, exDesc));
+const exDesc = syntax.BY_DESC(syntax.EXCLUDE(syntax.OR(...excludeWordDesc)));
+const inc = syntax.BY_ALL(syntax.INCLUDE(syntax.OR(...includeWordDesc)));
+
+console.log(syntax.ALL(inc, exTitle, exDesc));
 // const BASE_URL = 'https://hh.ru/search/vacancy?';
 // // qs.stringify({ a: ['b', 'c'] }, { arrayFormat: 'repeat' })
 // const filterVacanciesSearch = {
