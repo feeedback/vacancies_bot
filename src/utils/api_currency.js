@@ -63,3 +63,59 @@ export const convertCurrency = (numberPrice, rates, fromCode, toCode) => {
 
   return Math.floor(numberPrice * rate);
 };
+
+export const parseSalaryFromTitleRaw = (baseCurrency, rates, rawMin, rawMax, rawCurrencySymbol) => {
+  const USD = 'USD';
+  const baseCurrencySymbol = mapCurrencyCodeToSymbol[baseCurrency];
+  const currencySymbol = String(rawCurrencySymbol).trim();
+
+  const currency = mapSymbolToCurrencyCode[currencySymbol] ?? currencySymbol;
+  // if (rawCurrencySymbol === '$') {
+  //   console.log({ currencyCode, rateConvertCurrency });
+  // }
+  const isExistFork = rawMin && rawMax;
+  const min = convertCurrency(
+    getNumberFromCurrency(rawMin, currency),
+    rates,
+    currency,
+    baseCurrency
+  );
+  const max = convertCurrency(
+    getNumberFromCurrency(rawMax, currency),
+    rates,
+    currency,
+    baseCurrency
+  );
+
+  const minUSD = convertCurrency(min, rates, currency, USD);
+  const maxUSD = convertCurrency(max, rates, currency, USD);
+  const minF = `${Math.floor(min / 1000)}k`;
+  const maxF = `${Math.floor(max / 1000)}k`;
+  // eslint-disable-next-line no-nested-ternary
+  const strFork = isExistFork ? `${minF}–${maxF}` : rawMin ? `>${minF}` : `<${maxF}`;
+  // eslint-disable-next-line no-nested-ternary
+  const strForkUSD = isExistFork ? `${minUSD}–${maxUSD}` : rawMin ? `>${minUSD}` : `<${maxUSD}`;
+  // eslint-disable-next-line no-nested-ternary
+  const avg = !isExistFork
+    ? max
+      ? (max + max * 0.8) / 2
+      : (min * 1.15 + min) / 2
+    : (max + min) / 2;
+  // const avgFormat = `${Math.floor(avg / 1000)} тыс.`;
+  const avgUSD = convertCurrency(avg, rates, baseCurrency, USD);
+
+  return {
+    raw: {
+      rawCurrencySymbol,
+      baseCurrencySymbol,
+      avg,
+      avgUSD,
+      min,
+      max,
+    },
+    avg,
+    avgUSD,
+    fork: `${strFork} ${baseCurrencySymbol}`,
+    forkUSD: `${strForkUSD} $`,
+  };
+};

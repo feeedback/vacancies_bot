@@ -8,12 +8,7 @@ import dayjsRelativeTime from 'dayjs/plugin/relativeTime.js';
 import LRU from 'lru-cache';
 
 import { delayMs, getHashByStr } from '../utils/utils.js';
-import {
-  mapCurrencyCodeToSymbol,
-  mapSymbolToCurrencyCode,
-  getNumberFromCurrency,
-  convertCurrency,
-} from '../utils/api_currency.js';
+import { parseSalaryFromTitleRaw } from '../utils/api_currency.js';
 
 export const cache = new LRU({
   max: 2000,
@@ -89,64 +84,11 @@ export const getVacancyByFilterFromRssHabrCareer = async (filterParam, fromDayAg
 const TAGS_START_TITLE = 'Требуемые навыки: ';
 const regExpPatternContentVacancy = /((?:(?:от)\s+(?:(?:\d[\s\d]*\d)+)\s+[^\s]{1,4}\s*)(?:(?:до)\s*(?:(?:\d[\s\d]*\d)+)\s*[^\s]{1,4})){1}|((?:(?:от)\s+(?:(?:\d[\s\d]*\d)+)\s+[^\s]{1,4}\s*)|(?:(?:до)\s*(?:(?:\d[\s\d]*\d)+)\s*[^\s]{1,4})){1}/i;
 
-const parseSalaryFromTitle = (stringTitleVacancy, baseCurrency, rates) => {
-  const USD = 'USD';
-  const baseCurrencySymbol = mapCurrencyCodeToSymbol[baseCurrency];
+const parseSalaryFromTitleHabr = (stringTitleVacancy, baseCurrency, rates) => {
   const regExpPatternSalary = /(?:(от)\s*(?:(\d[\s\d]*\d)+)\s*)?(?:(до)\s*(?:(\d[\s\d]*\d)+)\s*)?(.)\)$/;
 
   const [, , rawMin, , rawMax, rawCurrencySymbol] = stringTitleVacancy.match(regExpPatternSalary);
-  const currencySymbol = String(rawCurrencySymbol).trim();
-
-  const currency = mapSymbolToCurrencyCode[currencySymbol];
-  // if (rawCurrencySymbol === '$') {
-  //   console.log({ currencyCode, rateConvertCurrency });
-  // }
-  const isExistFork = rawMin && rawMax;
-  const min = convertCurrency(
-    getNumberFromCurrency(rawMin, currency),
-    rates,
-    currency,
-    baseCurrency
-  );
-  const max = convertCurrency(
-    getNumberFromCurrency(rawMax, currency),
-    rates,
-    currency,
-    baseCurrency
-  );
-
-  const minUSD = convertCurrency(min, rates, currency, USD);
-  const maxUSD = convertCurrency(max, rates, currency, USD);
-
-  const minF = `${Math.floor(min / 1000)}k`;
-  const maxF = `${Math.floor(max / 1000)}k`;
-  // eslint-disable-next-line no-nested-ternary
-  const strFork = isExistFork ? `${minF}–${maxF}` : rawMin ? `>${minF}` : `<${maxF}`;
-  // eslint-disable-next-line no-nested-ternary
-  const strForkUSD = isExistFork ? `${minUSD}–${maxUSD}` : rawMin ? `>${minUSD}` : `<${maxUSD}`;
-  // eslint-disable-next-line no-nested-ternary
-  const avg = !isExistFork
-    ? max
-      ? (max + max * 0.8) / 2
-      : (min * 1.15 + min) / 2
-    : (max + min) / 2;
-  // const avgFormat = `${Math.floor(avg / 1000)} тыс.`;
-  const avgUSD = convertCurrency(avg, rates, baseCurrency, USD);
-
-  return {
-    raw: {
-      rawCurrencySymbol,
-      baseCurrencySymbol,
-      avg,
-      avgUSD,
-      min,
-      max,
-    },
-    avg,
-    avgUSD,
-    fork: `${strFork} ${baseCurrencySymbol}`,
-    forkUSD: `${strForkUSD} $`,
-  };
+  return parseSalaryFromTitleRaw(baseCurrency, rates, rawMin, rawMax, rawCurrencySymbol);
 };
 
 export const parseFilterFormatVacancies = async (
@@ -165,7 +107,7 @@ export const parseFilterFormatVacancies = async (
   const vacancies = Array.from(vacanciesRaw)
     .filter((vacancy) => vacancy.title)
     .map((vacancy) => {
-      const salaryData = parseSalaryFromTitle(vacancy.title, baseCurrency, rates);
+      const salaryData = parseSalaryFromTitleHabr(vacancy.title, baseCurrency, rates);
       const salary = {
         avg: salaryData.avg,
         avgUSD: salaryData.avgUSD,

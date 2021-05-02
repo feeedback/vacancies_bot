@@ -3,7 +3,8 @@ import dayjs from 'dayjs';
 import dayjsCustomParseFormat from 'dayjs/plugin/customParseFormat.js';
 import dayjsRelativeTime from 'dayjs/plugin/relativeTime.js';
 import dayjsUtc from 'dayjs/plugin/utc.js';
-import { getHashByStr } from '../../../src/utils/utils.js';
+import { getHashByStr } from '../utils/utils.js';
+import { parseSalaryFromTitleRaw } from '../utils/api_currency.js';
 
 dayjs.extend(dayjsCustomParseFormat);
 dayjs.extend(dayjsRelativeTime);
@@ -11,13 +12,40 @@ dayjs.extend(dayjsUtc);
 const getDOMDocument = (data) => new jsdom.JSDOM(data).window.document;
 
 const BASE_VACANCY_LINK = 'https://hh.ru/vacancy';
-const REGEX_SALARY = /(?:(?:^(?:от)\s*(?:(\d[\s\d]*\d)+))|(?:^(?:до)\s*(?:(\d[\s\d]*\d)+))|(?:^(?:(\d[\s\d]*\d)+)-(?:(\d[\s\d]*\d)+)))(?: (.+)$)/i;
-const mapCurrencyStrToCode = {
-  'USD': 'USD',
-  'руб.': 'RUB',
+
+const parseSalaryFromTitleHH = (
+  stringTitleVacancy,
+  baseCurrency = 'RUB',
+  rates = { RUB: 75, USD: 1 }
+) => {
+  const regExpPatternSalary = /(?:(?:^(?:от)\s*(?:(\d[\s\d]*\d)+))|(?:^(?:до)\s*(?:(\d[\s\d]*\d)+))|(?:^(?:(\d[\s\d]*\d)+)-(?:(\d[\s\d]*\d)+)))(?: (.+)$)/i;
+  const mapCurrencyStrToSymbol = {
+    'USD': '$',
+    'руб.': '₽',
+  };
+  const [, rawMin, rawMax, rawFrom, rawTo, rawCurrencyStr] = stringTitleVacancy.match(
+    regExpPatternSalary
+  );
+  const min = rawFrom ?? rawMin;
+  const max = rawTo ?? rawMax;
+  const rawCurrencySymbol = mapCurrencyStrToSymbol[rawCurrencyStr];
+  return parseSalaryFromTitleRaw(baseCurrency, rates, min, max, rawCurrencySymbol);
 };
 
-export default (data) => {
+const getStringifyVacancy = ({
+  title = '',
+  tasks = '',
+  skills = '',
+  link = '',
+  salary,
+  company = '',
+  schedule = '',
+  city = '',
+  ago = '',
+}) =>
+  `${salary.fork} (~${salary.avgUSD} $) | ${ago} | «${company}» | *«${title}»* | _${tasks} ${skills}_ | _${city}. ${schedule}_\n${link}`;
+
+export default (data, baseCurrency = 'RUB', rates = { RUB: 75, USD: 1 }) => {
   const document = getDOMDocument(data);
   const vacanciesEl = [...document.querySelectorAll('.vacancy-serp-item')];
   console.log('vacancies count:', vacanciesEl.length);
@@ -26,8 +54,8 @@ export default (data) => {
     return isText ? child?.textContent?.trim() : child;
   };
 
-  const vacanciesData = vacanciesEl.map((vacancy, i) => {
-    console.log('vacancy', '№:', i);
+  const vacanciesData = vacanciesEl.map((vacancy) => {
+    // console.log('vacancy', '№:', i);
     const getElByAttr = (attr, ...restArgs) => getChildTextByDataAttr(vacancy, attr, ...restArgs);
 
     const tasks = getElByAttr('vacancy-serp__vacancy_snippet_responsibility');
@@ -42,16 +70,11 @@ export default (data) => {
     const salaryStr = getElByAttr('vacancy-serp__vacancy-compensation');
     let salary = null;
     if (salaryStr) {
-      const [, rawMin, rawMax, rawFrom, rawTo, rawCurrencySymbol] = salaryStr.match(REGEX_SALARY);
-
-      salary = {
-        rawMin,
-        rawMax,
-        rawFrom,
-        rawTo,
-        rawCurrencySymbol: mapCurrencyStrToCode[rawCurrencySymbol],
-      };
+      salary = parseSalaryFromTitleHH(salaryStr, baseCurrency, rates);
     }
+
+    const scheduleRaw = getElByAttr('vacancy-serp__vacancy-work-schedule');
+    const schedule = scheduleRaw === 'Можно работать из дома' ? 'Можно удалённо.' : scheduleRaw;
 
     const company = getElByAttr('vacancy-serp__vacancy-employer');
     const address = getElByAttr('vacancy-serp__vacancy-address');
@@ -61,8 +84,8 @@ export default (data) => {
       'vacancy-serp__vacancy-date',
       '.vacancy-serp-item__publication-date_short'
     );
-    const createdAt = dayjs.utc(dateMonthDay, 'DD-MM').unix();
-    const ago = dayjs().to(dayjs.unix(createdAt));
+    const bumpedAt = dayjs.utc(dateMonthDay, 'DD-MM').unix();
+    const bumpedAgo = dayjs().to(dayjs.unix(bumpedAt));
     const content = [title, company, salaryStr, tasks, skills].join('\n');
 
     return {
@@ -73,14 +96,15 @@ export default (data) => {
       link,
       salary,
       company,
+      schedule,
       // address,
       city,
-      createdAt,
-      ago,
+      bumpedAt,
+      bumpedAgo,
       // content,
       hashContent: getHashByStr(content),
     };
   });
 
-  console.log(vacanciesData);
+  return { vacanciesData, getStringifyVacancy };
 };
