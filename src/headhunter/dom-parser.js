@@ -3,6 +3,7 @@ import dayjs from 'dayjs';
 import dayjsCustomParseFormat from 'dayjs/plugin/customParseFormat.js';
 import dayjsRelativeTime from 'dayjs/plugin/relativeTime.js';
 import dayjsUtc from 'dayjs/plugin/utc.js';
+
 import { getHashByStr } from '../utils/utils.js';
 import { parseSalaryFromTitleRaw } from '../utils/api_currency.js';
 
@@ -31,19 +32,6 @@ const parseSalaryFromTitleHH = (
   const rawCurrencySymbol = mapCurrencyStrToSymbol[rawCurrencyStr];
   return parseSalaryFromTitleRaw(baseCurrency, rates, min, max, rawCurrencySymbol);
 };
-
-const getStringifyVacancy = ({
-  title = '',
-  tasks = '',
-  skills = '',
-  link = '',
-  salary,
-  company = '',
-  schedule = '',
-  city = '',
-  ago = '',
-}) =>
-  `${salary.fork} (~${salary.avgUSD} $) | ${ago} | «${company}» | *«${title}»* | _${tasks} ${skills}_ | _${city}. ${schedule}_\n${link}`;
 
 export default (data, baseCurrency = 'RUB', rates = { RUB: 75, USD: 1 }) => {
   const document = getDOMDocument(data);
@@ -86,7 +74,7 @@ export default (data, baseCurrency = 'RUB', rates = { RUB: 75, USD: 1 }) => {
     );
     const bumpedAt = dayjs.utc(dateMonthDay, 'DD-MM').unix();
     const bumpedAgo = dayjs().to(dayjs.unix(bumpedAt));
-    const content = [title, company, salaryStr, tasks, skills].join('\n');
+    const content = [title, company, salaryStr, tasks, skills, schedule, city].join('\n');
 
     return {
       id,
@@ -106,5 +94,5 @@ export default (data, baseCurrency = 'RUB', rates = { RUB: 75, USD: 1 }) => {
     };
   });
 
-  return { vacanciesData, getStringifyVacancy };
+  return vacanciesData;
 };
