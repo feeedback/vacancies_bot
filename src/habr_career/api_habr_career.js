@@ -40,7 +40,7 @@ export const getVacancyByFilterFromRssHabrCareer = async (filterParam, fromDayAg
   while (vacancyCount && !isOlderThanFromDayAgo) {
     urlRss.searchParams.set('page', page);
     const keyCache = decodeURI(urlRss);
-    console.log(keyCache);
+    console.log('request vacancies Habr.Career', keyCache);
 
     let feed = null;
 
@@ -130,6 +130,7 @@ export const parseFilterFormatVacancies = async (
         salary,
         tags,
         tagsLowerCase: tags.map((tag) => tag.toLowerCase()),
+        source: 'HABR_CAREER',
       };
     });
 

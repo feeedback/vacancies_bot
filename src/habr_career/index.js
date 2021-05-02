@@ -9,7 +9,7 @@ import {
 } from './api_habr_career.js';
 import { getCurrencyRates } from '../utils/api_currency.js';
 
-const getRss = async (
+const getVacanciesHabrCareer = async (
   url,
   day = 2,
   vacancyExcludeTags = vacancyExcludeTagsMy,
@@ -37,7 +37,7 @@ const getRss = async (
   const topWordsByCountByFiltered = getTopWordByCount(vacanciesFiltered);
 
   const hashes = vacanciesFiltered.map(({ hashContent }) => hashContent);
-  console.log('getRss', Date.now() - logT, 'ms');
+  console.log('getVacanciesHabrCareer', Date.now() - logT, 'ms');
 
   return {
     stringVacancies,
@@ -51,4 +51,4 @@ const getRss = async (
   };
 };
 
-export default getRss;
+export default getVacanciesHabrCareer;

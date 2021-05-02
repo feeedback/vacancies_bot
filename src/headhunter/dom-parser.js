@@ -42,7 +42,8 @@ const parseSalaryFromTitleHH = (
 export default (data, baseCurrency = 'RUB', rates = { RUB: 75, USD: 1 }, maxSalary = Infinity) => {
   const document = getDOMDocument(data);
   const vacanciesEl = [...document.querySelectorAll('.vacancy-serp-item')];
-  console.log('vacancies count:', vacanciesEl.length);
+
+  console.log('Получено:', vacanciesEl.length, 'Вакансий — HeadHunter');
   const getChildTextByDataAttr = (el, str, addStr = '', isText = true) => {
     const child = el.querySelector(`[data-qa="${str}"]${addStr ? `${` ${addStr}`}` : ''}`);
     return isText ? child?.textContent?.trim() : child;
@@ -109,6 +110,7 @@ export default (data, baseCurrency = 'RUB', rates = { RUB: 75, USD: 1 }, maxSala
         // content,
         hashContent,
         ago: ago === 'a few seconds ago' ? 'a minute ago' : ago,
+        source: 'HEADHUNTER',
       };
     })
     .filter(({ salary: { avg } }) => avg < maxSalary)

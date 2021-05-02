@@ -54,7 +54,7 @@ const createFilterSearch = (userFilter = {}, userWords = {}, lastRequestTime) =>
   return filterVariable;
 };
 
-const getVacancies = async (
+const requestVacanciesHeadHunter = async (
   userFilter,
   userWords,
   lastRequestTime = dayjs().startOf('day').unix(),
@@ -66,7 +66,7 @@ const getVacancies = async (
     `${requestConfig.BASE_URL}?${qs.stringify(filter, { arrayFormat: 'repeat' })}`
   ).toString();
   const keyCache = getHashByStr(url);
-  console.log(keyCache, { userFilter, text: filter.text });
+  console.log('request vacancies HeadHunter', url);
 
   let vacanciesData = null;
   if (cache.has(keyCache)) {
@@ -81,8 +81,8 @@ const getVacancies = async (
 
     return { vacanciesData, getStringifyVacancies };
   } catch (error) {
-    console.log('error getVacancies', error);
+    console.log('error requestVacanciesHeadHunter', error);
     throw error;
   }
 };
-export default getVacancies;
+export default requestVacanciesHeadHunter;

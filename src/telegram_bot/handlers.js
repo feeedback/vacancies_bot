@@ -4,8 +4,8 @@ import { URL } from 'url';
 import _ from 'lodash';
 import dayjs from 'dayjs';
 import { markdownEscapes } from 'markdown-escapes';
-import getRss from '../habr_career/index.js';
-import getVacancies from '../headhunter/index.js';
+import getVacanciesHabrCareer from '../habr_career/index.js';
+import getVacanciesHeadHunter from '../headhunter/index.js';
 import { botStartMessage, commandDescription, initStateUsers } from './settings.js';
 import { nowMsDate, chunkTextBlocksBySizeByte } from '../utils/utils.js';
 
@@ -24,7 +24,6 @@ const startingUserState = (userId) => {
   mapUserIdToState[userId].excludeWords = userState.excludeWords ?? [];
   mapUserIdToState[userId].subIntervalId = userState.subIntervalId ?? [];
   mapUserIdToState[userId].hashes = userState.hashes ?? new Set();
-  mapUserIdToState[userId].hashesHH = userState.hashesHH ?? new Set();
   mapUserIdToState[userId].pollOptionsExTags = userState.pollOptionsExTags ?? {};
   mapUserIdToState[userId].pollOptionsExWords = userState.pollOptionsExWords ?? {};
   mapUserIdToState[userId].HH = userState.HH ?? {};
@@ -79,7 +78,7 @@ const setExcludeTags = async (ctx, isSaveOld = false) => {
     '_Потом вы можете посмотреть список добавленных искл. тегов командой_ */extags*'
   );
   await ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
-  const { topTagsByCount, topTagsByCountByFiltered } = await getRss(
+  const { topTagsByCount, topTagsByCountByFiltered } = await getVacanciesHabrCareer(
     mapUserIdToState[userId].rss,
     20,
     mapUserIdToState[userId].excludeTags,
@@ -129,7 +128,7 @@ const setExcludeWords = async (ctx, isSaveOld = false) => {
     '_Потом вы можете посмотреть список добавленных искл. слов командой_ */exwords*'
   );
   await ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
-  const { topWordsByCount, topWordsByCountByFiltered } = await getRss(
+  const { topWordsByCount, topWordsByCountByFiltered } = await getVacanciesHabrCareer(
     mapUserIdToState[userId].rss,
     20,
     mapUserIdToState[userId].excludeTags,
@@ -199,7 +198,7 @@ const getVacancy = async (ctx) => {
   ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
 
   try {
-    const { stringVacancies, vacanciesFiltered } = await getRss(
+    const { stringVacancies, vacanciesFiltered } = await getVacanciesHabrCareer(
       rss,
       day,
       userState.excludeTags,
@@ -215,7 +214,7 @@ const getVacancy = async (ctx) => {
     const {
       stringVacancies: stringVacanciesHH,
       vacanciesFiltered: vacanciesFilteredHH,
-    } = await getVacancies(dayUnix, userState.HH.filter, userState.HH.words);
+    } = await getVacanciesHeadHunter(dayUnix, userState.HH.filter, userState.HH.words);
 
     console.log('вакансии получены HeadHunter', vacanciesFilteredHH.length);
     const allVacancies = [...stringVacancies, ...stringVacanciesHH];
@@ -270,14 +269,27 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
   const existHashes = userState.hashes;
 
   try {
-    const { hashes, vacanciesFiltered, getStringifyVacancies } = await getRss(
+    const { hashes, vacanciesFiltered, getStringifyVacancies } = await getVacanciesHabrCareer(
       rss,
       isFirstSub ? 7 : 4,
       userState.excludeTags,
       userState.excludeWords
     );
-    console.log('вакансии получены', vacanciesFiltered.length);
-    const newHashes = hashes.filter((vac) => !existHashes.has(vac));
+    console.log('фильтрованные вакансии Habr.career', vacanciesFiltered.length);
+
+    const dayUnix = dayjs()
+      .subtract(intervalPingMs + 5000, 'ms')
+      .unix();
+
+    const {
+      vacanciesFiltered: vacanciesFilteredHH,
+      getStringifyVacancies: getStringifyVacanciesHH,
+      hashes: hashesHH,
+    } = await getVacanciesHeadHunter(dayUnix, userState.HH.filter, userState.HH.words);
+
+    console.log('фильтрованные вакансии HeadHunter', vacanciesFilteredHH.length);
+
+    const newHashes = [...hashes, ...hashesHH].filter((vac) => !existHashes.has(vac));
 
     if (!newHashes.length) {
       console.log('getVacancySub нет новых вакансий');
@@ -296,34 +308,27 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
     }
     bot.telegram.sendChatAction(chatId, 'typing');
 
+    const allVacancies = [...vacanciesFiltered, ...vacanciesFilteredHH];
     const newVacancy = newHashes.map((hash) =>
-      vacanciesFiltered.find(({ hashContent }) => hashContent === hash)
+      allVacancies.find(({ hashContent }) => hashContent === hash)
     );
-    const newVacanciesStr = getStringifyVacancies(newVacancy);
-    const message = newVacanciesStr.join('\n\n');
+    const newVacanciesStr = [
+      ...getStringifyVacancies(newVacancy.filter((v) => v.source === 'HABR_CAREER')),
+      ...getStringifyVacanciesHH(newVacancy.filter((v) => v.source === 'HEADHUNTER')),
+    ];
 
-    if (Buffer.byteLength(message, 'utf8') >= 4096) {
-      for (const messageChunk of _.chunk(newVacanciesStr, 10)) {
-        await bot.telegram.sendMessage(chatId, messageChunk.join('\n\n'), {
-          disable_web_page_preview: true,
-          parse_mode: 'Markdown',
-          // disable_notification: true,
-          // webhookReply: false,
-        });
-      }
-      bot.telegram.webhookReply = true;
-    } else {
-      bot.telegram.sendMessage(chatId, message, {
+    for (const messageChunk of chunkTextBlocksBySizeByte(newVacanciesStr, 4096)) {
+      await bot.telegram.sendMessage(chatId, messageChunk.join('\n\n'), {
         disable_web_page_preview: true,
         parse_mode: 'Markdown',
         // disable_notification: true,
+        // webhookReply: false,
       });
     }
+    bot.telegram.webhookReply = true;
   } catch (error) {
     console.log(error);
   }
-
-  const existHashesHH = userState.hashesHH;
 };
 
 export const getHandlers = (
@@ -462,7 +467,7 @@ export const getHandlers = (
       );
       console.log('user id', userId, 'sub success');
       mapUserIdToState[userId].isSub = true;
-      await getVacancySub(bot, chatId, userId, true, 1000 * 60 * 5);
+      await getVacancySub(bot, chatId, userId, true, 1000 * 60 * 10);
     },
     unsub: async (ctx) => {
       const userId = ctx.update.message.from.id;
