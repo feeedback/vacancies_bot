@@ -159,7 +159,8 @@ export const getStringifyVacancies = (vacanciesFiltered) => {
         .replace(/ Требуемые навыки:.*$/, '');
 
       const tagsStr = tags.map((tag) => `_#${tag}_`).join(', ');
-      return `${fork} (~${avgUSD} $) | ${ago} | «${author}» | *«${titleShort}»* | _${contentFormat}_ ${tagsStr}\n${link}`;
+      const linkB = link.split('career.habr').join('*career.habr*');
+      return `${fork} (~${avgUSD} $) | ${ago} | «${author}» | *«${titleShort}»* | _${contentFormat}_ ${tagsStr}\n${linkB}`;
     }
   );
   return stringVacancies;

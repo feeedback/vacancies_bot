@@ -5,7 +5,6 @@ export const excludeWordTitle = [
   '"Team Lead"',
   'Тимлид',
   'Архитектор',
-  'writer',
   'PERL',
   'тестиро*',
   'rails',
@@ -64,7 +63,7 @@ export const excludeWordTitle = [
   'Андроид',
   'design*',
 ];
-export const excludeWordDesc = ['"C#"', '"1C"', '"PHP"', '"OpenCart"', '"django"'];
+export const excludeWordDesc = ['"C#"', '"1C"', '"PHP"', '"django"', '"jQuery"', '"React Native"'];
 export const includeWordDesc = [
   'js',
   'javascript*',

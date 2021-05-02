@@ -8,8 +8,8 @@ import { getHashByStr } from '../utils/utils.js';
 import { getCurrencyRates } from '../utils/api_currency.js';
 
 export const cache = new LRU({
-  max: 2000,
-  maxAge: 1000 * 60 * 60 * 1, // 1 hour
+  max: 1000,
+  maxAge: 1000 * 60 * 60 * 24 * 10, // 10 days
 });
 
 const getStringifyVacancy = ({
@@ -21,13 +21,11 @@ const getStringifyVacancy = ({
   company = '',
   schedule = '',
   city = '',
-  edit = '',
-  created = '',
-  // ago = '',
+  ago = '',
 }) => {
-  const agoStr = edit !== created ? `${edit} (${created})}` : created;
-
-  return `${salary.fork} (~${salary.avgUSD} $) | ${agoStr} | «${company}» | *«${title}»* | _${tasks} ${skills}_ | _${city}. ${schedule}_\n${link}`;
+  // const agoStr = edit !== created ? `${edit} (${created})}` : created;
+  const linkB = link.split('hh').join('*hh*');
+  return `${salary.fork} (~${salary.avgUSD} $) | ${ago} | «${company}» | *«${title}»* | _${tasks} ${skills}_ | _${city}. ${schedule}_\n${linkB}`;
 };
 
 const createFilterSearch = (userFilter, userWords, lastRequestTime) => {
@@ -50,19 +48,14 @@ const createFilterSearch = (userFilter, userWords, lastRequestTime) => {
 const getVacancies = async (
   userFilter,
   userWords,
-  requestPeriodSec = 5 * 60,
-  lastRequestTimeRaw = null
+  lastRequestTime = dayjs().startOf('day').unix(),
+  maxSalary = Infinity
 ) => {
   const rates = await getCurrencyRates();
-  const lastRequestTime =
-    lastRequestTimeRaw ??
-    dayjs()
-      .subtract(requestPeriodSec - 1, 'second')
-      .unix();
   const filter = createFilterSearch(userFilter, userWords, lastRequestTime);
   const url = new URL(
     `${requestConfig.BASE_URL}?${qs.stringify(filter, { arrayFormat: 'repeat' })}`
-  );
+  ).toString();
   const keyCache = getHashByStr(url);
   console.log(keyCache, { userFilter, text: filter.text });
 
@@ -73,8 +66,8 @@ const getVacancies = async (
   }
 
   try {
-    const res = await axios.get(url.toString(), { headers: requestConfig.headers });
-    vacanciesData = domVacanciesParser(res.data, 'RUB', rates);
+    const res = await axios.get(url, { headers: requestConfig.headers });
+    vacanciesData = domVacanciesParser(res.data, 'RUB', rates, maxSalary);
     cache.set(keyCache, vacanciesData); // 1 hour
 
     return { vacanciesData, getStringifyVacancy };

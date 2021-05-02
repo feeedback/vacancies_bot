@@ -22,6 +22,7 @@ const startingUserState = (userId) => {
   mapUserIdToState[userId].excludeWords = userState.excludeWords ?? [];
   mapUserIdToState[userId].subIntervalId = userState.subIntervalId ?? [];
   mapUserIdToState[userId].hashes = userState.hashes ?? new Set();
+  mapUserIdToState[userId].hashesHH = userState.hashesHH ?? new Set();
   mapUserIdToState[userId].pollOptionsExTags = userState.pollOptionsExTags ?? {};
   mapUserIdToState[userId].pollOptionsExWords = userState.pollOptionsExWords ?? {};
   userState.isStarted = true;
@@ -254,6 +255,7 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
   }
 
   const existHashes = mapUserIdToState[userId].hashes;
+  const existHashesHH = mapUserIdToState[userId].hashesHH;
 
   try {
     const { hashes, vacanciesFiltered, getStringifyVacancies } = await getRss(
