@@ -2,6 +2,7 @@ import dayjs from 'dayjs';
 import axios from 'axios';
 import qs from 'qs';
 import domVacanciesParser from './dom-parser.js';
+import hh from './config.js';
 import { excludeWordTitle, excludeWordDesc, includeWordDesc } from './hh_words.js';
 
 const syntax = {
@@ -21,8 +22,6 @@ const inc = syntax.BY_ALL(syntax.INCLUDE(syntax.OR(...includeWordDesc)));
 const searchText = syntax.ALL(inc, exTitle, exDesc);
 
 console.log(searchText);
-
-const BASE_URL = 'https://hh.ru/search/vacancy';
 
 const filterVacanciesSearch = {
   L_is_autosearch: true,
@@ -46,11 +45,13 @@ const getVacancies = async (filterParam) => {
   if (typeof filter === 'string') {
     filter = qs.parse(new URL(filter).search.slice(1));
   }
-  // const url = new URL(`${BASE_URL}?${qs.stringify(filter, { arrayFormat: 'repeat' })}`);
-  const url = new URL(`${BASE_URL}`);
+  const url = new URL(`${hh.BASE_URL}?${qs.stringify(filter, { arrayFormat: 'repeat' })}`);
+  // const url = new URL(`${hh.BASE_URL}`);
+
+  console.log(decodeURI(url));
 
   try {
-    const res = await axios.get(url.toString());
+    const res = await axios.get(url.toString(), { headers: hh.headers });
     const vacancies = domVacanciesParser(res.data);
     return vacancies;
   } catch (error) {
