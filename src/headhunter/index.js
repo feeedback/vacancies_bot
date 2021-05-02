@@ -1,25 +1,28 @@
 import dayjs from 'dayjs';
-import {
-  excludeWordTitle,
-  excludeWordDesc,
-  includeWordDesc,
-} from '../../data/settings/hh/hh_words.js';
+import * as myFiltersWords from '../../data/settings/hh/hh_words.js';
 import myFilter from '../../data/settings/hh/my_filter.js';
-import getVacancies from './api_hh.js';
+import requestVacancies from './api_hh.js';
 
-const main = async () => {
-  const myFiltersWords = {
-    excludeWordTitle,
-    excludeWordDesc,
-    includeWordDesc,
-  };
-  const lastRequestTime = dayjs().startOf('day').unix();
-  const { vacanciesData, getStringifyVacancy } = await getVacancies(
-    myFilter,
-    myFiltersWords,
+const getVacancies = async (
+  lastRequestTime = dayjs().startOf('day').unix(),
+  filter = myFilter,
+  filtersWords = myFiltersWords
+) => {
+  const { vacanciesData: vacanciesFiltered, getStringifyVacancies } = await requestVacancies(
+    filter,
+    filtersWords,
     lastRequestTime,
     250000
   );
-  console.log(vacanciesData.map((v) => getStringifyVacancy(v)));
+  const hashes = vacanciesFiltered.map(({ hashContent }) => hashContent);
+  const stringVacancies = getStringifyVacancies(vacanciesFiltered);
+  console.log('stringVacancies HHHHHH:>> ', stringVacancies);
+  return {
+    stringVacancies,
+    hashes,
+    vacanciesFiltered,
+    getStringifyVacancies,
+  };
 };
-main();
+// getVacancies();
+export default getVacancies;

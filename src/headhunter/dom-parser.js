@@ -87,7 +87,7 @@ export default (data, baseCurrency = 'RUB', rates = { RUB: 75, USD: 1 }, maxSala
       const cachedCreatedAt = cacheHashVacancyCreatedAt.get(hashContent);
 
       const createdAt = cachedCreatedAt ?? dayjs().unix();
-      const ago = dayjs().to(dayjs.unix(createdAt));
+      const ago = dayjs.unix(createdAt).fromNow();
 
       if (!cachedCreatedAt) {
         cacheHashVacancyCreatedAt.set(hashContent, createdAt);
@@ -108,7 +108,7 @@ export default (data, baseCurrency = 'RUB', rates = { RUB: 75, USD: 1 }, maxSala
         bumpedAgo,
         // content,
         hashContent,
-        ago,
+        ago: ago === 'a few seconds ago' ? 'a minute ago' : ago,
       };
     })
     .filter(({ salary: { avg } }) => avg < maxSalary)

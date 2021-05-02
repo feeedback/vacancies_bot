@@ -120,11 +120,13 @@ export const parseFilterFormatVacancies = async (
         .split(', ')
         .map((tag) => tag.slice(1));
 
+      const ago = dayjs(dayjs(vacancy.isoDate)).fromNow();
+
       return {
         ...vacancy,
         titleShort: vacancy.title.match(/^Требуется «([^»]+?)»/)[1],
         date: dayjs(vacancy.isoDate),
-        ago: dayjs().to(dayjs(vacancy.isoDate)),
+        ago: ago === 'a few seconds ago' ? 'a minute ago' : ago,
         salary,
         tags,
         tagsLowerCase: tags.map((tag) => tag.toLowerCase()),
@@ -158,9 +160,9 @@ export const getStringifyVacancies = (vacanciesFiltered) => {
         .replace(regExpPatternContentVacancy, '')
         .replace(/ Требуемые навыки:.*$/, '');
 
-      const tagsStr = tags.map((tag) => `_#${tag}_`).join(', ');
-      const linkB = link.split('career.habr').join('*career.habr*');
-      return `${fork} (~${avgUSD} $) | ${ago} | «${author}» | *«${titleShort}»* | _${contentFormat}_ ${tagsStr}\n${linkB}`;
+      const tagsStr = tags.map((tag) => `#${tag}`).join(', ');
+      const linkB = link.split('career.habr').join('*career.habr*').split('://')[1];
+      return `${fork} (~${avgUSD} $) | ${ago} | «${author}» | *«${titleShort}»* | ${tagsStr} | _${contentFormat}_ ► ${linkB}`;
     }
   );
   return stringVacancies;

@@ -24,15 +24,24 @@ const getStringifyVacancy = ({
   ago = '',
 }) => {
   // const agoStr = edit !== created ? `${edit} (${created})}` : created;
-  const linkB = link.split('hh').join('*hh*');
-  return `${salary.fork} (~${salary.avgUSD} $) | ${ago} | «${company}» | *«${title}»* | _${tasks} ${skills}_ | _${city}. ${schedule}_\n${linkB}`;
+  const linkB = link.split('hh').join('*hh*').split('://')[1];
+  return `${salary.fork} (~${salary.avgUSD} $) | ${ago} | «${company}» | *«${title}»* | ${tasks} ${skills} | _${city}. ${schedule}_ ► ${linkB}`;
 };
 
-const createFilterSearch = (userFilter, userWords, lastRequestTime) => {
-  const { excludeWordTitle, excludeWordDesc, includeWordDesc } = userWords;
-  const exTitle = syntax.BY_TITLE(syntax.EXCLUDE(syntax.OR(...excludeWordTitle)));
-  const exDesc = syntax.BY_DESC(syntax.EXCLUDE(syntax.OR(...excludeWordDesc)));
-  const inc = syntax.BY_ALL(syntax.INCLUDE(syntax.OR(...includeWordDesc)));
+const getStringifyVacancies = (vacanciesFiltered) => vacanciesFiltered.map(getStringifyVacancy);
+
+const createFilterSearch = (userFilter = {}, userWords = {}, lastRequestTime) => {
+  const { excludeWordTitle = [], excludeWordDesc = [], includeWordDesc = [] } = userWords;
+
+  const exTitle = excludeWordTitle.length
+    ? syntax.BY_TITLE(syntax.EXCLUDE(syntax.OR(...excludeWordTitle)))
+    : '';
+  const exDesc = excludeWordDesc.length
+    ? syntax.BY_DESC(syntax.EXCLUDE(syntax.OR(...excludeWordDesc)))
+    : '';
+  const inc = includeWordDesc.length
+    ? syntax.BY_ALL(syntax.INCLUDE(syntax.OR(...includeWordDesc)))
+    : '';
   const searchText = syntax.ALL(inc, exTitle, exDesc);
 
   const filterVariable = {
@@ -62,7 +71,7 @@ const getVacancies = async (
   let vacanciesData = null;
   if (cache.has(keyCache)) {
     vacanciesData = cache.get(keyCache);
-    return { vacanciesData, getStringifyVacancy };
+    return { vacanciesData, getStringifyVacancies };
   }
 
   try {
@@ -70,7 +79,7 @@ const getVacancies = async (
     vacanciesData = domVacanciesParser(res.data, 'RUB', rates, maxSalary);
     cache.set(keyCache, vacanciesData); // 1 hour
 
-    return { vacanciesData, getStringifyVacancy };
+    return { vacanciesData, getStringifyVacancies };
   } catch (error) {
     console.log('error getVacancies', error);
     throw error;

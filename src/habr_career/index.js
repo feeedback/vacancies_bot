@@ -38,6 +38,7 @@ const getRss = async (
 
   const hashes = vacanciesFiltered.map(({ hashContent }) => hashContent);
   console.log('getRss', Date.now() - logT, 'ms');
+
   return {
     stringVacancies,
     hashes,

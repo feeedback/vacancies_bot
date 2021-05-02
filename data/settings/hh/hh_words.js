@@ -63,7 +63,15 @@ export const excludeWordTitle = [
   'Андроид',
   'design*',
 ];
-export const excludeWordDesc = ['"C#"', '"1C"', '"PHP"', '"django"', '"jQuery"', '"React Native"'];
+export const excludeWordDesc = [
+  '"C#"',
+  '"1C"',
+  '"PHP"',
+  '"django"',
+  '"jQuery"',
+  '"React Native"',
+  '"React & Redux"',
+];
 export const includeWordDesc = [
   'js',
   'javascript*',

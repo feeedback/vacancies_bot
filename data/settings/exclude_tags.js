@@ -1,7 +1,7 @@
 export default [
   'senior',
   'lead',
-
+  'Javacore',
   'PHP',
   'jquery',
   'wordpress',

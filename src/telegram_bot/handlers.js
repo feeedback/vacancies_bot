@@ -2,10 +2,12 @@
 /* eslint-disable no-useless-escape */
 import { URL } from 'url';
 import _ from 'lodash';
+import dayjs from 'dayjs';
 import { markdownEscapes } from 'markdown-escapes';
 import getRss from '../habr_career/index.js';
+import getVacancies from '../headhunter/index.js';
 import { botStartMessage, commandDescription, initStateUsers } from './settings.js';
-import { nowMsDate } from '../utils/utils.js';
+import { nowMsDate, chunkTextBlocksBySizeByte } from '../utils/utils.js';
 
 const markdownRegexp = new RegExp(`([${markdownEscapes.join('')}])`);
 
@@ -25,6 +27,10 @@ const startingUserState = (userId) => {
   mapUserIdToState[userId].hashesHH = userState.hashesHH ?? new Set();
   mapUserIdToState[userId].pollOptionsExTags = userState.pollOptionsExTags ?? {};
   mapUserIdToState[userId].pollOptionsExWords = userState.pollOptionsExWords ?? {};
+  mapUserIdToState[userId].HH = userState.HH ?? {};
+  mapUserIdToState[userId].HH.filter = userState.HH.filter ?? {};
+  mapUserIdToState[userId].HH.words = userState.HH.words ?? {};
+
   userState.isStarted = true;
 };
 
@@ -164,10 +170,12 @@ const setExcludeWords = async (ctx, isSaveOld = false) => {
 const getVacancy = async (ctx) => {
   console.log('\n', nowMsDate(), getVacancy);
   const userId = ctx.update.message.from.id;
-  if (!mapUserIdToState[userId]?.isStarted) {
+  const userState = mapUserIdToState[userId];
+
+  if (!userState?.isStarted) {
     startingUserState(userId);
   }
-  const rss = mapUserIdToState[userId]?.rss;
+  const rss = userState?.rss;
 
   if (!rss) {
     ctx.replyWithMarkdown('RSS not found! Please add that with */rss* [link]');
@@ -176,7 +184,7 @@ const getVacancy = async (ctx) => {
   }
   ctx.telegram.webhookReply = false;
 
-  if (!mapUserIdToState[userId].excludeTags.length === 0) {
+  if (!userState.excludeTags.length === 0) {
     ctx.replyWithMarkdown(
       '_Ваш список исключаемых тегов пуст. Вы можете добавить их командой */extagsset*_'
     );
@@ -194,30 +202,34 @@ const getVacancy = async (ctx) => {
     const { stringVacancies, vacanciesFiltered } = await getRss(
       rss,
       day,
-      mapUserIdToState[userId].excludeTags,
-      mapUserIdToState[userId].excludeWords
+      userState.excludeTags,
+      userState.excludeWords
     );
-    console.log('вакансии получены', vacanciesFiltered.length);
-    const message = stringVacancies.join('\n\n');
 
-    if (Buffer.byteLength(message, 'utf8') >= 4096) {
-      for (const messageChunk of _.chunk(stringVacancies, 10)) {
-        ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
-        await ctx.reply(messageChunk.join('\n\n'), {
-          disable_web_page_preview: true,
-          webhookReply: false,
-          disable_notification: true,
-          parse_mode: 'Markdown',
-        });
-      }
-      ctx.telegram.webhookReply = true;
-      return;
+    console.log('вакансии получены Habr.career', vacanciesFiltered.length);
+
+    const dayUnix = dayjs()
+      .startOf('day')
+      .subtract(day - 1, 'day')
+      .unix();
+    const {
+      stringVacancies: stringVacanciesHH,
+      vacanciesFiltered: vacanciesFilteredHH,
+    } = await getVacancies(dayUnix, userState.HH.filter, userState.HH.words);
+
+    console.log('вакансии получены HeadHunter', vacanciesFilteredHH.length);
+    const allVacancies = [...stringVacancies, ...stringVacanciesHH];
+
+    for (const messageChunk of chunkTextBlocksBySizeByte(allVacancies, 4096)) {
+      ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
+
+      await ctx.reply(messageChunk.join('\n\n'), {
+        disable_web_page_preview: true,
+        webhookReply: false,
+        disable_notification: true,
+        parse_mode: 'Markdown',
+      });
     }
-    await ctx.reply(message, {
-      disable_web_page_preview: true,
-      disable_notification: true,
-      parse_mode: 'Markdown',
-    });
 
     ctx.telegram.webhookReply = true;
   } catch (error) {
@@ -231,7 +243,8 @@ const getVacancy = async (ctx) => {
 const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPingMs) => {
   console.log('\n', nowMsDate(), getVacancySub);
   // const userId = ctx.update.message.from.id;
-  const rss = mapUserIdToState[userId]?.rss;
+  const userState = mapUserIdToState[userId];
+  const rss = userState?.rss;
 
   if (!rss) {
     sendMD(bot, chatId, 'RSS not found! Please add that with */rss* [link]');
@@ -240,13 +253,13 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
   }
   bot.telegram.webhookReply = false;
 
-  mapUserIdToState[userId].subIntervalId.push(
+  userState.subIntervalId.push(
     setTimeout(async () => {
       await getVacancySub(bot, chatId, userId, false, intervalPingMs);
     }, intervalPingMs)
   ); // раз в 5 минуту
 
-  if (!mapUserIdToState[userId].excludeTags.length === 0) {
+  if (!userState.excludeTags.length === 0) {
     sendMD(
       bot,
       chatId,
@@ -254,15 +267,14 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
     );
   }
 
-  const existHashes = mapUserIdToState[userId].hashes;
-  const existHashesHH = mapUserIdToState[userId].hashesHH;
+  const existHashes = userState.hashes;
 
   try {
     const { hashes, vacanciesFiltered, getStringifyVacancies } = await getRss(
       rss,
       isFirstSub ? 7 : 4,
-      mapUserIdToState[userId].excludeTags,
-      mapUserIdToState[userId].excludeWords
+      userState.excludeTags,
+      userState.excludeWords
     );
     console.log('вакансии получены', vacanciesFiltered.length);
     const newHashes = hashes.filter((vac) => !existHashes.has(vac));
@@ -274,7 +286,7 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
 
     console.log('getVacancySub получены новые вакансии -', newHashes.length);
     for (const newVac of newHashes) {
-      mapUserIdToState[userId].hashes.add(newVac);
+      userState.hashes.add(newVac);
     }
     if (isFirstSub) {
       console.log('getVacancySub isFirstSub -> return');
@@ -310,6 +322,8 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
   } catch (error) {
     console.log(error);
   }
+
+  const existHashesHH = userState.hashesHH;
 };
 
 export const getHandlers = (
