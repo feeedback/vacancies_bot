@@ -1,8 +1,8 @@
-import MY_SETTINGS from '../../data/settings/my_rss.js';
-import vacancyExcludeTagsMy from '../../data/settings/exclude_tags.js';
-import vacancyExcludeWordsInDescMy from '../../data/settings/exclude_words_title.js';
-import * as HHmyFiltersWords from '../../data/settings/hh/hh_words.js';
-import HHmyFilter from '../../data/settings/hh/my_filter.js';
+import MY_SETTINGS from '../../data/settings/habr_career/rss_filter.js';
+import vacancyExcludeTagsMy from '../../data/settings/habr_career/exclude_tags.js';
+import vacancyExcludeWordsInDescMy from '../../data/settings/habr_career/exclude_words_title.js';
+import * as HHmyFiltersWords from '../../data/settings/headhunter/hh_words.js';
+import HHmyFilter from '../../data/settings/headhunter/filter.js';
 
 export const botStartMessage = [
   '*Здравствуйте!* Бот позволяет гибко фильтровать и подписываться на новые вакансии!\n',

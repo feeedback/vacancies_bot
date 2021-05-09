@@ -30,7 +30,6 @@ export default [
   'React.js',
   'android',
   'ios',
-  // 'mysql',
   // 'Scss',
   // 'Sass',
   // 'Less',

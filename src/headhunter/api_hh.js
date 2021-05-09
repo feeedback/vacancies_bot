@@ -2,7 +2,7 @@ import dayjs from 'dayjs';
 import axios from 'axios';
 import qs from 'qs';
 import LRU from 'lru-cache';
-import domVacanciesParser from './dom-parser.js';
+import { parseVacanciesFromDom, parseSalaryFromTitleHH } from './dom-parser.js';
 import { requestConfig, syntaxSearch as syntax, filterVacanciesSearchBase } from './config.js';
 import { getHashByStr } from '../utils/utils.js';
 import { getCurrencyRates } from '../utils/api_currency.js';
@@ -54,6 +54,26 @@ const createFilterSearch = (userFilter = {}, userWords = {}, lastRequestTime) =>
   return filterVariable;
 };
 
+const formatFilterSort = (
+  vacanciesRaw,
+  baseCurrency = 'RUB',
+  rates = { RUB: 75, USD: 1 },
+  maxSalary = Infinity
+) => {
+  const vacancies = vacanciesRaw
+    .map((vacancy) => {
+      let salary = null;
+      if (vacancy.salaryStr) {
+        salary = parseSalaryFromTitleHH(vacancy.salaryStr, baseCurrency, rates);
+      }
+      return { ...vacancy, salary };
+    })
+    .filter(({ salary: { avg } }) => avg < maxSalary)
+    .sort(({ salary: { avgUSD: A } }, { salary: { avgUSD: B } }) => B - A);
+
+  return vacancies;
+};
+
 const requestVacanciesHeadHunter = async (
   userFilter,
   userWords,
@@ -66,7 +86,7 @@ const requestVacanciesHeadHunter = async (
     `${requestConfig.BASE_URL}?${qs.stringify(filter, { arrayFormat: 'repeat' })}`
   ).toString();
   const keyCache = getHashByStr(url);
-  console.log('request vacancies HeadHunter', url);
+  // console.log('request vacancies HeadHunter', url);
 
   let vacanciesData = null;
   if (cache.has(keyCache)) {
@@ -76,7 +96,9 @@ const requestVacanciesHeadHunter = async (
 
   try {
     const res = await axios.get(url, { headers: requestConfig.headers });
-    vacanciesData = domVacanciesParser(res.data, 'RUB', rates, maxSalary);
+    const vacanciesDataRaw = parseVacanciesFromDom(res.data);
+
+    vacanciesData = formatFilterSort(vacanciesDataRaw, 'RUB', rates, maxSalary);
     cache.set(keyCache, vacanciesData); // 1 hour
 
     return { vacanciesData, getStringifyVacancies };

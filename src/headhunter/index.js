@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
-import * as myFiltersWords from '../../data/settings/hh/hh_words.js';
-import myFilter from '../../data/settings/hh/my_filter.js';
+import * as myFiltersWords from '../../data/settings/headhunter/hh_words.js';
+import myFilter from '../../data/settings/headhunter/filter.js';
 import requestVacancies from './api_hh.js';
 
 const getVacanciesHeadHunter = async (

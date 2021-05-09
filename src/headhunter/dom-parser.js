@@ -20,7 +20,7 @@ const getDOMDocument = (data) => new jsdom.JSDOM(data).window.document;
 
 const BASE_VACANCY_LINK = 'https://hh.ru/vacancy';
 
-const parseSalaryFromTitleHH = (
+export const parseSalaryFromTitleHH = (
   stringTitleVacancy,
   baseCurrency = 'RUB',
   rates = { RUB: 75, USD: 1 }
@@ -39,7 +39,7 @@ const parseSalaryFromTitleHH = (
   return parseSalaryFromTitleRaw(baseCurrency, rates, min, max, rawCurrencySymbol);
 };
 
-export default (data, baseCurrency = 'RUB', rates = { RUB: 75, USD: 1 }, maxSalary = Infinity) => {
+export const parseVacanciesFromDom = (data) => {
   const document = getDOMDocument(data);
   const vacanciesEl = [...document.querySelectorAll('.vacancy-serp-item')];
 
@@ -49,72 +49,65 @@ export default (data, baseCurrency = 'RUB', rates = { RUB: 75, USD: 1 }, maxSala
     return isText ? child?.textContent?.trim() : child;
   };
 
-  const vacanciesData = vacanciesEl
-    .map((vacancy) => {
-      // console.log('vacancy', '№:', i);
-      const getElByAttr = (attr, ...restArgs) => getChildTextByDataAttr(vacancy, attr, ...restArgs);
+  const vacanciesData = vacanciesEl.map((vacancy) => {
+    // console.log('vacancy', '№:', i);
+    const getElByAttr = (attr, ...restArgs) => getChildTextByDataAttr(vacancy, attr, ...restArgs);
 
-      const tasks = getElByAttr('vacancy-serp__vacancy_snippet_responsibility');
-      const skills = getElByAttr('vacancy-serp__vacancy_snippet_requirement');
-      const title = getElByAttr('vacancy-serp__vacancy-title');
+    const tasks = getElByAttr('vacancy-serp__vacancy_snippet_responsibility');
+    const skills = getElByAttr('vacancy-serp__vacancy_snippet_requirement');
+    const title = getElByAttr('vacancy-serp__vacancy-title');
 
-      const id = getElByAttr('vacancy-serp__vacancy-title', '', false)
-        .href.split('?')[0]
-        .split('vacancy/')[1];
-      const link = `${BASE_VACANCY_LINK}/${id}`;
+    const id = getElByAttr('vacancy-serp__vacancy-title', '', false)
+      .href.split('?')[0]
+      .split('vacancy/')[1];
+    const link = `${BASE_VACANCY_LINK}/${id}`;
 
-      const salaryStr = getElByAttr('vacancy-serp__vacancy-compensation');
-      let salary = null;
-      if (salaryStr) {
-        salary = parseSalaryFromTitleHH(salaryStr, baseCurrency, rates);
-      }
+    const salaryStr = getElByAttr('vacancy-serp__vacancy-compensation');
 
-      const scheduleRaw = getElByAttr('vacancy-serp__vacancy-work-schedule');
-      const schedule = scheduleRaw === 'Можно работать из дома' ? 'Можно удалённо.' : scheduleRaw;
+    const scheduleRaw = getElByAttr('vacancy-serp__vacancy-work-schedule');
+    const schedule = scheduleRaw === 'Можно работать из дома' ? 'Можно удалённо.' : scheduleRaw;
 
-      const company = getElByAttr('vacancy-serp__vacancy-employer');
-      const address = getElByAttr('vacancy-serp__vacancy-address');
-      const city = address.split(',')[0];
+    const company = getElByAttr('vacancy-serp__vacancy-employer');
+    const address = getElByAttr('vacancy-serp__vacancy-address');
+    const city = address.split(',')[0];
 
-      const dateMonthDay = getElByAttr(
-        'vacancy-serp__vacancy-date',
-        '.vacancy-serp-item__publication-date_short'
-      );
-      const bumpedAt = dayjs.utc(dateMonthDay, 'DD-MM').unix();
-      const bumpedAgo = dayjs().to(dayjs.unix(bumpedAt));
-      const content = [title, company, salaryStr, tasks, skills, schedule, city].join('\n');
-      const hashContent = getHashByStr(content);
+    const dateMonthDay = getElByAttr(
+      'vacancy-serp__vacancy-date',
+      '.vacancy-serp-item__publication-date_short'
+    );
+    const bumpedAt = dayjs.utc(dateMonthDay, 'DD-MM').unix();
+    const bumpedAgo = dayjs().to(dayjs.unix(bumpedAt));
+    const content = [title, company, salaryStr, tasks, skills, schedule, city].join('\n');
+    const hashContent = getHashByStr(content);
 
-      const cachedCreatedAt = cacheHashVacancyCreatedAt.get(hashContent);
+    const cachedCreatedAt = cacheHashVacancyCreatedAt.get(hashContent);
 
-      const createdAt = cachedCreatedAt ?? dayjs().unix();
-      const ago = dayjs.unix(createdAt).fromNow();
+    const createdAt = cachedCreatedAt ?? dayjs().unix();
+    const ago = dayjs.unix(createdAt).fromNow();
 
-      if (!cachedCreatedAt) {
-        cacheHashVacancyCreatedAt.set(hashContent, createdAt);
-      }
+    if (!cachedCreatedAt) {
+      cacheHashVacancyCreatedAt.set(hashContent, createdAt);
+    }
 
-      return {
-        id,
-        title,
-        tasks,
-        skills,
-        link,
-        salary,
-        company,
-        schedule,
-        // address,
-        city,
-        bumpedAt,
-        bumpedAgo,
-        // content,
-        hashContent,
-        ago: ago === 'a few seconds ago' ? 'a minute ago' : ago,
-        source: 'HEADHUNTER',
-      };
-    })
-    .filter(({ salary: { avg } }) => avg < maxSalary)
-    .sort(({ salary: { avgUSD: A } }, { salary: { avgUSD: B } }) => B - A);
+    return {
+      id,
+      title,
+      tasks,
+      skills,
+      link,
+      company,
+      schedule,
+      // address,
+      salaryStr,
+      city,
+      bumpedAt,
+      bumpedAgo,
+      // content,
+      hashContent,
+      ago: ago === 'a few seconds ago' ? 'a minute ago' : ago,
+      source: 'HEADHUNTER',
+    };
+  });
 
   return vacanciesData;
 };
