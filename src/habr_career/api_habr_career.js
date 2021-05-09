@@ -53,7 +53,7 @@ export const getVacancyByFilterFromRssHabrCareer = async (filterParam, fromDayAg
       } else {
         cache.set(keyCache, feed); // 24 hour
       }
-      await delayMs(3000);
+      await delayMs(1000);
     }
 
     vacancyCount = feed.items.length;
