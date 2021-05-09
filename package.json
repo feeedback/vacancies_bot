@@ -1,17 +1,15 @@
 {
   "name": "vacancies_bot",
-  "private": true,
   "version": "1.0.0",
   "description": "",
   "main": "src/index.js",
   "scripts": {
     "test": "npx jest --passWithNoTests",
-    "run": "node src/telegram_bot/index.js",
-    "telegramServe": "nodemon src/telegram_bot/index.js",
-    "telegramBotPM2": "pm2 src/telegram_bot/index.js"
+    "run": "node ./src/telegram_bot/index.js",
+    "telegramServe": "nodemon ./src/telegram_bot/index.js",
+    "telegramBotPM2": "pm2 ./src/telegram_bot/index.js"
   },
   "author": "Alexander Rzhanitsyn",
-  "license": "No License",
   "engines": {
     "node": ">=14"
   },
@@ -24,7 +22,7 @@
     "axios": "^0.21.1",
     "currency-formatter": "^1.5.7",
     "dayjs": "^1.10.4",
-    "dotenv": "^8.2.0",
+    "dotenv": "^8.6.0",
     "jsdom": "^16.5.3",
     "lodash": "^4.17.21",
     "lru-cache": "^6.0.0",

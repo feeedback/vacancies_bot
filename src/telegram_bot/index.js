@@ -1,7 +1,8 @@
-// @-ts-check
-import 'dotenv/config.js';
+import dotenv from 'dotenv';
 import { Telegraf } from 'telegraf';
 import { getHandlers, unsubAll } from './handlers.js';
+
+dotenv.config();
 
 const bot = new Telegraf(process.env.TELEGRAM_BOT_API);
 const handlers = getHandlers(bot);

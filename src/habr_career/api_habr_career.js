@@ -1,4 +1,3 @@
-import 'dotenv/config.js';
 import RssParser from 'rss-parser';
 import { URL } from 'url';
 import qs from 'qs';
