@@ -31,5 +31,5 @@ export const filterVacanciesSearchBase = {
   order_by: 'publication_time',
   no_magic: true, // ???
   items_on_page: 100,
-  only_with_salary: true,
+  // only_with_salary: true,
 };

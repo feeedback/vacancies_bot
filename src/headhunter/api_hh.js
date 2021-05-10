@@ -24,8 +24,10 @@ const getStringifyVacancy = ({
   ago = '',
 }) => {
   // const agoStr = edit !== created ? `${edit} (${created})}` : created;
+  const salaryOut = salary.isSalaryDefine ? `${salary.fork} (~${salary.avgUSD} $)` : '_Не указана_';
   const linkB = link.split('hh').join('*hh*').split('://')[1];
-  return `${salary.fork} (~${salary.avgUSD} $) | ${ago} | «${company}» | *«${title}»* | ${tasks} ${skills} | _${city}. ${schedule}_ ► ${linkB}`;
+
+  return `${salaryOut} | ${ago} | «${company}» | *«${title}»* | ${tasks} ${skills} | _${city}. ${schedule}_ ► ${linkB}`;
 };
 
 const getStringifyVacancies = (vacanciesFiltered) => vacanciesFiltered.map(getStringifyVacancy);
@@ -62,13 +64,14 @@ const formatFilterSort = (
 ) => {
   const vacancies = vacanciesRaw
     .map((vacancy) => {
-      let salary = null;
+      let salary = { isSalaryDefine: false, avg: null, avgUSD: null, fork: null, forkUSD: null };
+
       if (vacancy.salaryStr) {
         salary = parseSalaryFromTitleHH(vacancy.salaryStr, baseCurrency, rates);
       }
       return { ...vacancy, salary };
     })
-    .filter(({ salary: { avg } }) => avg < maxSalary)
+    .filter(({ salary: { avg, isSalaryDefine } }) => !isSalaryDefine || avg < maxSalary)
     .sort(({ salary: { avgUSD: A } }, { salary: { avgUSD: B } }) => B - A);
 
   return vacancies;
@@ -86,7 +89,7 @@ const requestVacanciesHeadHunter = async (
     `${requestConfig.BASE_URL}?${qs.stringify(filter, { arrayFormat: 'repeat' })}`
   ).toString();
   const keyCache = getHashByStr(url);
-  // console.log('request vacancies HeadHunter', url);
+  console.log('request vacancies HeadHunter', url);
 
   let vacanciesData = null;
   if (cache.has(keyCache)) {

@@ -116,5 +116,6 @@ export const parseSalaryFromTitleRaw = (baseCurrency, rates, rawMin, rawMax, raw
     avgUSD,
     fork: `${strFork} ${baseCurrencySymbol}`,
     forkUSD: `${strForkUSD} $`,
+    isSalaryDefine: true,
   };
 };

@@ -86,7 +86,11 @@ const regExpPatternContentVacancy = /((?:(?:от)\s+(?:(?:\d[\s\d]*\d)+)\s+[^\s]
 const parseSalaryFromTitleHabr = (stringTitleVacancy, baseCurrency, rates) => {
   const regExpPatternSalary = /(?:(от)\s*(?:(\d[\s\d]*\d)+)\s*)?(?:(до)\s*(?:(\d[\s\d]*\d)+)\s*)?(.)\)$/;
 
-  const [, , rawMin, , rawMax, rawCurrencySymbol] = stringTitleVacancy.match(regExpPatternSalary);
+  const salary = stringTitleVacancy.match(regExpPatternSalary);
+  if (!salary) {
+    return null;
+  }
+  const [, , rawMin, , rawMax, rawCurrencySymbol] = salary;
   return parseSalaryFromTitleRaw(baseCurrency, rates, rawMin, rawMax, rawCurrencySymbol);
 };
 
@@ -107,12 +111,17 @@ export const parseFilterFormatVacancies = async (
     .filter((vacancy) => vacancy.title)
     .map((vacancy) => {
       const salaryData = parseSalaryFromTitleHabr(vacancy.title, baseCurrency, rates);
-      const salary = {
-        avg: salaryData.avg,
-        avgUSD: salaryData.avgUSD,
-        fork: salaryData.fork,
-        forkUSD: salaryData.forkUSD,
-      };
+      let salary = { isSalaryDefine: false, avg: null, avgUSD: null, fork: null, forkUSD: null };
+
+      if (salaryData) {
+        salary = {
+          avg: salaryData.avg,
+          avgUSD: salaryData.avgUSD,
+          fork: salaryData.fork,
+          forkUSD: salaryData.forkUSD,
+          isSalaryDefine: true,
+        };
+      }
 
       const tags = String(vacancy.content)
         .slice(vacancy.content.indexOf(TAGS_START_TITLE) + TAGS_START_TITLE.length, -1)
@@ -146,7 +155,7 @@ export const parseFilterFormatVacancies = async (
       // console.log('countBadTag <= maxCountIncludesBadTag', { countBadTag, maxCountIncludesBadTag });
       return countBadTag <= maxCountIncludesBadTag && countBadWord <= maxCountIncludesBadWord;
     })
-    .filter(({ salary: { avg } }) => avg < maxSalary)
+    .filter(({ salary: { avg, isSalaryDefine } }) => !isSalaryDefine || avg < maxSalary)
     .sort(({ salary: { avgUSD: A } }, { salary: { avgUSD: B } }) => B - A);
 
   return { vacanciesFiltered, vacancies };
@@ -154,15 +163,25 @@ export const parseFilterFormatVacancies = async (
 
 export const getStringifyVacancies = (vacanciesFiltered) => {
   const stringVacancies = vacanciesFiltered.map(
-    ({ content, author, titleShort, ago, salary: { fork, avgUSD }, link, tags }) => {
+    ({
+      content,
+      author,
+      titleShort,
+      ago,
+      salary: { fork, avgUSD, isSalaryDefine },
+      link,
+      tags,
+    }) => {
       const contentFormat = content
         .replace(/.+»\. /, '')
         .replace(regExpPatternContentVacancy, '')
         .replace(/ Требуемые навыки:.*$/, '');
 
+      const salaryOut = isSalaryDefine ? `${fork} (~${avgUSD} $)` : '_Не указана_';
+
       const tagsStr = tags.map((tag) => `#${tag}`).join(', ');
       const linkB = link.split('career.habr').join('*career.habr*').split('://')[1];
-      return `${fork} (~${avgUSD} $) | ${ago} | «${author}» | *«${titleShort}»* | ${tagsStr} | _${contentFormat}_ ► ${linkB}`;
+      return `${salaryOut} | ${ago} | «${author}» | *«${titleShort}»* | ${tagsStr} | _${contentFormat}_ ► ${linkB}`;
     }
   );
   return stringVacancies;
