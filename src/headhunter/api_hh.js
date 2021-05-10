@@ -26,8 +26,14 @@ const getStringifyVacancy = ({
   // const agoStr = edit !== created ? `${edit} (${created})}` : created;
   const salaryOut = salary.isSalaryDefine ? `${salary.fork} (~${salary.avgUSD} $)` : '_Не указана_';
   const linkB = link.split('hh').join('*hh*').split('://')[1];
+  const companyR = company.replace(/[_$*]/g, '-');
+  const titleR = title.replace(/[_$*]/g, '-');
+  const tasksR = tasks.replace(/[_$*]/g, '-');
+  const skillsR = skills.replace(/[_$*]/g, '-');
+  const cityR = city.replace(/[_$*]/g, '-');
+  const scheduleR = schedule.replace(/[_$*]/g, '-');
 
-  return `${salaryOut} | ${ago} | «${company}» | *«${title}»* | ${tasks} ${skills} | _${city}. ${schedule}_ ► ${linkB}`;
+  return `${salaryOut} | ${ago} | «${companyR}» | *«${titleR}»* | ${tasksR} ${skillsR} | _${cityR}. ${scheduleR}_ ► ${linkB}`;
 };
 
 const getStringifyVacancies = (vacanciesFiltered) => vacanciesFiltered.map(getStringifyVacancy);

@@ -181,7 +181,10 @@ export const getStringifyVacancies = (vacanciesFiltered) => {
 
       const tagsStr = tags.map((tag) => `#${tag}`).join(', ');
       const linkB = link.split('career.habr').join('*career.habr*').split('://')[1];
-      return `${salaryOut} | ${ago} | «${author}» | *«${titleShort}»* | ${tagsStr} | _${contentFormat}_ ► ${linkB}`;
+      const authorR = author.replace(/[_$*]/g, '-');
+      const titleShortR = titleShort.replace(/[_$*]/g, '-');
+      const contentFormatR = contentFormat.replace(/[_$*]/g, '-');
+      return `${salaryOut} | ${ago} | «${authorR}» | *«${titleShortR}»* | ${tagsStr} | _${contentFormatR}_ ► ${linkB}`;
     }
   );
   return stringVacancies;
