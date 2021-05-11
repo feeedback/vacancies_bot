@@ -30,9 +30,11 @@ export const parseSalaryFromTitleHH = (
     'USD': '$',
     'руб.': '₽',
   };
-  const [, rawMin, rawMax, rawFrom, rawTo, rawCurrencyStr] = stringTitleVacancy.match(
-    regExpPatternSalary
-  );
+  const salary = stringTitleVacancy.match(regExpPatternSalary);
+  if (!salary) {
+    return { isSalaryDefine: false, avg: null, avgUSD: null, fork: null, forkUSD: null };
+  }
+  const [, rawMin, rawMax, rawFrom, rawTo, rawCurrencyStr] = salary;
   const min = rawFrom ?? rawMin;
   const max = rawTo ?? rawMax;
   const rawCurrencySymbol = mapCurrencyStrToSymbol[rawCurrencyStr];
@@ -46,15 +48,21 @@ export const parseVacanciesFromDom = (data) => {
   console.log('Получено:', vacanciesEl.length, 'Вакансий — HeadHunter');
   const getChildTextByDataAttr = (el, str, addStr = '', isText = true) => {
     const child = el.querySelector(`[data-qa="${str}"]${addStr ? `${` ${addStr}`}` : ''}`);
-    return isText ? child?.textContent?.trim() : child;
+    return isText ? child?.textContent?.trim() || '' : child;
   };
 
   const vacanciesData = vacanciesEl.map((vacancy) => {
     // console.log('vacancy', '№:', i);
     const getElByAttr = (attr, ...restArgs) => getChildTextByDataAttr(vacancy, attr, ...restArgs);
 
-    const tasks = getElByAttr('vacancy-serp__vacancy_snippet_responsibility');
-    const skills = getElByAttr('vacancy-serp__vacancy_snippet_requirement');
+    const tasks = getElByAttr('vacancy-serp__vacancy_snippet_responsibility').replace(
+      /<\/?highlighttext>/gi,
+      ''
+    );
+    const skills = getElByAttr('vacancy-serp__vacancy_snippet_requirement').replace(
+      /<\/?highlighttext>/gi,
+      ''
+    );
     const title = getElByAttr('vacancy-serp__vacancy-title');
 
     const id = getElByAttr('vacancy-serp__vacancy-title', '', false)

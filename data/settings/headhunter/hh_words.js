@@ -65,13 +65,13 @@ export const excludeWordTitle = [
 ];
 
 export const excludeWordDesc = [
-  '"C#"',
-  '"1C"',
-  '"PHP"',
-  '"django"',
-  '"jQuery"',
-  '"React Native"',
-  '"React & Redux"',
+  // '"C#"',
+  // '"1C"',
+  // '"PHP"',
+  // '"django"',
+  // '"jQuery"',
+  // '"React Native"',
+  // '"React & Redux"',
 ];
 
 export const includeWordDesc = [
