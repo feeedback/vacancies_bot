@@ -98,6 +98,7 @@ const requestVacanciesHeadHunter = async (
   console.log('request vacancies HeadHunter', url);
 
   let vacanciesData = null;
+
   if (cache.has(keyCache)) {
     vacanciesData = cache.get(keyCache);
     return { vacanciesData, getStringifyVacancies };

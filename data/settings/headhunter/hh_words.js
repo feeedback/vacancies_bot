@@ -62,11 +62,19 @@ export const excludeWordTitle = [
   'PHP',
   'Андроид',
   'design*',
+  '1С-*',
+  'Bitrix*',
+  'Laravel*',
+  'Symfony*',
+  'Security',
+  'Interviewer',
+  'Wordpress',
+  'Таргет*',
 ];
 
 export const excludeWordDesc = [
   // '"C#"',
-  // '"1C"',
+  '"1C"',
   // '"PHP"',
   // '"django"',
   // '"jQuery"',

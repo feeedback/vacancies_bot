@@ -28,4 +28,5 @@ export default [
   'Фронтэнд',
   'android',
   'ios',
+  '1С-Bitrix',
 ];
