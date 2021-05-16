@@ -75,6 +75,7 @@ export const excludeWordTitle = [
 export const excludeWordDesc = [
   // '"C#"',
   '"1C"',
+  '"laravel"',
   // '"PHP"',
   // '"django"',
   // '"jQuery"',

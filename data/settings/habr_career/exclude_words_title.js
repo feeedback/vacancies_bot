@@ -20,6 +20,7 @@ export default [
   'HTML',
   // 'golang',
   'front-end',
+  'Front-End',
   'Vue',
   'Frontend',
   'CSS',
@@ -29,4 +30,5 @@ export default [
   'android',
   'ios',
   '1С-Bitrix',
+  'Ruby',
 ];
