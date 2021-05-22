@@ -53,7 +53,7 @@ export const excludeWordTitle = [
   'Flutter',
   'Fronten*',
   '"ASP.Net*"',
-  '".Net*"',
+  '".NET*"',
   'BPMs',
   'BPMN',
   'Assembler',
@@ -70,6 +70,8 @@ export const excludeWordTitle = [
   'Interviewer',
   'Wordpress',
   'Таргет*',
+  'Преподаватель*',
+  'Автор*',
 ];
 
 export const excludeWordDesc = [

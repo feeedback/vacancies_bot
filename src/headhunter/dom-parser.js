@@ -41,8 +41,18 @@ export const parseSalaryFromTitleHH = (
   return parseSalaryFromTitleRaw(baseCurrency, rates, min, max, rawCurrencySymbol);
 };
 
+// export const pageVacanciesCount = (data) => {
+//   const document = getDOMDocument(data);
+
+//   return document.querySelectorAll('.bloko-button-group > span').length;
+// };
+
 export const parseVacanciesFromDom = (data) => {
   const document = getDOMDocument(data);
+  // console.log(document.documentElement.outerHTML);
+  const vacanciesCount = Number(
+    document.querySelector(`h1.bloko-header-1`).childNodes[0].textContent
+  );
   const vacanciesEl = [...document.querySelectorAll('.vacancy-serp-item')];
 
   console.log('Получено:', vacanciesEl.length, 'Вакансий — HeadHunter');
@@ -51,7 +61,7 @@ export const parseVacanciesFromDom = (data) => {
     return isText ? child?.textContent?.trim() || '' : child;
   };
 
-  const vacanciesData = vacanciesEl.map((vacancy) => {
+  const vacanciesDataRaw = vacanciesEl.map((vacancy) => {
     // console.log('vacancy', '№:', i);
     const getElByAttr = (attr, ...restArgs) => getChildTextByDataAttr(vacancy, attr, ...restArgs);
 
@@ -117,5 +127,5 @@ export const parseVacanciesFromDom = (data) => {
     };
   });
 
-  return vacanciesData;
+  return { vacanciesDataRaw, vacanciesCount };
 };

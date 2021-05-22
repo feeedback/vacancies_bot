@@ -4,7 +4,7 @@ import qs from 'qs';
 import LRU from 'lru-cache';
 import { parseVacanciesFromDom, parseSalaryFromTitleHH } from './dom-parser.js';
 import { requestConfig, syntaxSearch as syntax, filterVacanciesSearchBase } from './config.js';
-import { getHashByStr } from '../utils/utils.js';
+import { delayMs, getHashByStr } from '../utils/utils.js';
 import { getCurrencyRates } from '../utils/api_currency.js';
 
 export const cache = new LRU({
@@ -91,30 +91,50 @@ const requestVacanciesHeadHunter = async (
 ) => {
   const rates = await getCurrencyRates();
   const filter = createFilterSearch(userFilter, userWords, lastRequestTime);
-  const url = new URL(
+  const urlRaw = new URL(
     `${requestConfig.BASE_URL}?${qs.stringify(filter, { arrayFormat: 'repeat' })}`
-  ).toString();
-  const keyCache = getHashByStr(url);
-  console.log('request vacancies HeadHunter', url);
-
-  let vacanciesData = null;
+  );
+  const keyCache = getHashByStr(urlRaw.toString());
 
   if (cache.has(keyCache)) {
-    vacanciesData = cache.get(keyCache);
-    return { vacanciesData, getStringifyVacancies };
+    return { vacanciesData: cache.get(keyCache), getStringifyVacancies };
+  }
+  console.log('request vacancies HeadHunter', urlRaw.toString());
+
+  let page = 0;
+  let pageMax = Infinity;
+  const vacancies = [];
+
+  while (page < pageMax) {
+    urlRaw.searchParams.set('page', page);
+    const url = urlRaw.toString();
+
+    let vacanciesData = null;
+    console.log('--- --- ---> page', page + 1);
+
+    try {
+      const res = await axios.get(url, { headers: requestConfig.headers });
+      const { vacanciesDataRaw, vacanciesCount } = parseVacanciesFromDom(res.data);
+
+      pageMax = Math.ceil(vacanciesCount / 20);
+
+      vacanciesData = formatFilterSort(vacanciesDataRaw, 'RUB', rates, maxSalary);
+      vacancies.push(...vacanciesData);
+
+      if (vacanciesData.length === 0) {
+        pageMax = 0;
+      }
+    } catch (error) {
+      console.log('error requestVacanciesHeadHunter', error);
+      throw error;
+    }
+
+    page += 1;
+    await delayMs(1000);
   }
 
-  try {
-    const res = await axios.get(url, { headers: requestConfig.headers });
-    const vacanciesDataRaw = parseVacanciesFromDom(res.data);
+  cache.set(keyCache, vacancies); // 1 hour
 
-    vacanciesData = formatFilterSort(vacanciesDataRaw, 'RUB', rates, maxSalary);
-    cache.set(keyCache, vacanciesData); // 1 hour
-
-    return { vacanciesData, getStringifyVacancies };
-  } catch (error) {
-    console.log('error requestVacanciesHeadHunter', error);
-    throw error;
-  }
+  return { vacanciesData: vacancies, getStringifyVacancies };
 };
 export default requestVacanciesHeadHunter;
