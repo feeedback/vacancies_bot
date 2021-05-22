@@ -95,7 +95,7 @@ export const parseVacanciesFromDom = (data) => {
     );
     const bumpedAt = dayjs.utc(dateMonthDay, 'DD-MM').unix();
     const bumpedAgo = dayjs().to(dayjs.unix(bumpedAt));
-    const content = [title, company, salaryStr, tasks, skills, schedule, city].join('\n');
+    const content = [title, company, salaryStr, tasks, skills, schedule].join('\n');
     const hashContent = getHashByStr(content);
 
     const cachedCreatedAt = cacheHashVacancyCreatedAt.get(hashContent);

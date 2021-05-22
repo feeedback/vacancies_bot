@@ -7,6 +7,7 @@ export const excludeWordTitle = [
   'Архитектор',
   'PERL',
   'тестиро*',
+  'автотестир*',
   'rails',
   'Salesforce',
   'фронтенд',
@@ -45,6 +46,7 @@ export const excludeWordTitle = [
   'Python',
   'Angular*',
   'DevOps',
+  'OpenCart',
   'SMM',
   'SEO',
   '"Vue.js"',
@@ -54,8 +56,7 @@ export const excludeWordTitle = [
   'Fronten*',
   '"ASP.Net*"',
   '".NET*"',
-  'BPMs',
-  'BPMN',
+  'BPM*',
   'Assembler',
   'Linux',
   'Tilda',
@@ -72,6 +73,10 @@ export const excludeWordTitle = [
   'Таргет*',
   'Преподаватель*',
   'Автор*',
+  'Ассистент*',
+  'Language*',
+  'Куратор',
+  '".NET+C#"',
 ];
 
 export const excludeWordDesc = [

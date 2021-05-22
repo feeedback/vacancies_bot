@@ -31,4 +31,5 @@ export default [
   'ios',
   '1С-Bitrix',
   'Ruby',
+  'Python',
 ];

@@ -1,5 +1,7 @@
 import { fileURLToPath } from 'url';
 // import qs from 'qs';
+import stringSimilarity from 'string-similarity';
+// import fs from 'fs';
 // import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
@@ -48,3 +50,8 @@ export const chunkTextBlocksBySizeByte = (textBlocks, maxSize = 4096) => {
   }
   return chunked;
 };
+
+export const getStringSimilarity = (str1 = '', str2 = '') =>
+  stringSimilarity.compareTwoStrings(str1, str2);
+
+// console.log(getStringSimilarity());
