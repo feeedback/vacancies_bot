@@ -30,8 +30,6 @@ const getVacanciesHeadHunter = async (
     }
   );
 
-  console.log(vacanciesFiltered);
-
   const hashes = vacanciesFiltered.map(({ hashContent }) => hashContent);
 
   const stringVacancies = getStringifyVacancies(vacanciesFiltered);

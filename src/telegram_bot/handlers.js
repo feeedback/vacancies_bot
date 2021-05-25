@@ -12,12 +12,14 @@ import { nowMsDate, chunkTextBlocksBySizeByte } from '../utils/utils.js';
 const markdownRegexp = new RegExp(`([${markdownEscapes.join('')}])`);
 
 export const mapUserIdToState = { ...initStateUsers };
+// export const mapUserIdToState = {};
 
 const startingUserState = (userId) => {
-  const userState = mapUserIdToState[userId];
+  let userState = mapUserIdToState[userId];
 
   if (!userState) {
     mapUserIdToState[userId] = {};
+    userState = {};
   }
 
   mapUserIdToState[userId].excludeTags = userState.excludeTags ?? [];
@@ -26,7 +28,10 @@ const startingUserState = (userId) => {
   mapUserIdToState[userId].hashes = userState.hashes ?? new Set();
   mapUserIdToState[userId].pollOptionsExTags = userState.pollOptionsExTags ?? {};
   mapUserIdToState[userId].pollOptionsExWords = userState.pollOptionsExWords ?? {};
+
   mapUserIdToState[userId].HH = userState.HH ?? {};
+  userState.HH = userState.HH ?? {};
+
   mapUserIdToState[userId].HH.filter = userState.HH.filter ?? {};
   mapUserIdToState[userId].HH.words = userState.HH.words ?? {};
 
