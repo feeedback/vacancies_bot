@@ -75,13 +75,16 @@ export const excludeWordTitle = [
   'Автор*',
   'Ассистент*',
   'Language*',
+  'ABAP*',
+  'ExtJS*',
+  '"Ext.JS"',
   'Куратор',
   '".NET+C#"',
 ];
 
 export const excludeWordDesc = [
   // '"C#"',
-  '"1C"',
+  // '"1C"',
   '"laravel"',
   // '"PHP"',
   // '"django"',

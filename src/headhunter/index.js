@@ -18,8 +18,8 @@ const getVacanciesHeadHunter = async (
   );
 
   // const vacanciesFiltered = _.uniqBy(vacanciesFilteredRaw, 'hashContent');
-  const vacanciesFiltered = Object.values(_.groupBy(vacanciesFilteredRaw, 'hashContent')).map(
-    (vacancyArr) => {
+  const vacanciesFiltered = Object.values(_.groupBy(vacanciesFilteredRaw, 'hashContent'))
+    .map((vacancyArr) => {
       const baseVacancy = vacancyArr[0];
       // объединяем одинаковые вакансии в разных городах, выводим как одну вакансию со списком городов через ;
       if (vacancyArr.length > 1) {
@@ -27,8 +27,8 @@ const getVacanciesHeadHunter = async (
       }
 
       return baseVacancy;
-    }
-  );
+    })
+    .sort(({ salary: { avgUSD: A } }, { salary: { avgUSD: B } }) => B - A);
 
   const hashes = vacanciesFiltered.map(({ hashContent }) => hashContent);
 
