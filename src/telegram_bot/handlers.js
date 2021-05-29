@@ -1,18 +1,43 @@
+/* eslint-disable import/no-mutable-exports */
 /* eslint-disable no-param-reassign */
 /* eslint-disable no-useless-escape */
+import dotenv from 'dotenv';
 import { URL } from 'url';
 import _ from 'lodash';
 import dayjs from 'dayjs';
 import { markdownEscapes } from 'markdown-escapes';
+import Redis from 'ioredis';
 import getVacanciesHabrCareer from '../habr_career/index.js';
 import getVacanciesHeadHunter from '../headhunter/index.js';
 import { botStartMessage, commandDescription, initStateUsers } from './settings.js';
 import { nowMsDate, chunkTextBlocksBySizeByte } from '../utils/utils.js';
 
+dotenv.config();
+
+export const redisStore = new Redis({
+  port: 14033, // Redis port
+  host: 'redis-14033.c239.us-east-1-2.ec2.cloud.redislabs.com', // Redis host
+  family: 4, // 4 (IPv4) or 6 (IPv6)
+  password: process.env.REDIS_PASS,
+  db: 0,
+  maxRetriesPerRequest: 1,
+});
+export let mapUserIdToState = { ...initStateUsers };
+
+(async () => {
+  const cachedState = await redisStore.get('mapUserIdToState');
+  console.log(cachedState);
+  if (cachedState) {
+    try {
+      mapUserIdToState = JSON.parse(cachedState);
+    } catch (error) {
+      await redisStore.del('mapUserIdToState');
+    }
+  }
+})();
 const markdownRegexp = new RegExp(`([${markdownEscapes.join('')}])`);
 
-export const mapUserIdToState = { ...initStateUsers };
-// export const mapUserIdToState = {};
+// export const mapUserIdToState = await redisStore.get('mapUserIdToState', mapUserIdToState) || initStateUsers;
 
 const startingUserState = (userId) => {
   let userState = mapUserIdToState[userId];
@@ -25,7 +50,7 @@ const startingUserState = (userId) => {
   mapUserIdToState[userId].excludeTags = userState.excludeTags ?? [];
   mapUserIdToState[userId].excludeWords = userState.excludeWords ?? [];
   mapUserIdToState[userId].subIntervalId = userState.subIntervalId ?? [];
-  mapUserIdToState[userId].hashes = userState.hashes ?? new Set();
+  mapUserIdToState[userId].hashes = userState.hashes ?? [];
   mapUserIdToState[userId].pollOptionsExTags = userState.pollOptionsExTags ?? {};
   mapUserIdToState[userId].pollOptionsExWords = userState.pollOptionsExWords ?? {};
 
@@ -87,7 +112,8 @@ const setExcludeTags = async (ctx, isSaveOld = false) => {
     mapUserIdToState[userId].rss,
     20,
     mapUserIdToState[userId].excludeTags,
-    mapUserIdToState[userId].excludeWords
+    mapUserIdToState[userId].excludeWords,
+    redisStore
   );
   // await ctx.poll([topTagsByCount]);
   // await ctx.telegram.sendPoll(ctx.chatId: string | number, question: string, options: topTagsByCount, extra ?: ExtraPoll)
@@ -137,7 +163,8 @@ const setExcludeWords = async (ctx, isSaveOld = false) => {
     mapUserIdToState[userId].rss,
     20,
     mapUserIdToState[userId].excludeTags,
-    mapUserIdToState[userId].excludeWords
+    mapUserIdToState[userId].excludeWords,
+    redisStore
   );
   // await ctx.poll([topTagsByCount]);
   // await ctx.telegram.sendPoll(ctx.chatId: string | number, question: string, options: topTagsByCount, extra ?: ExtraPoll)
@@ -207,7 +234,8 @@ const getVacancy = async (ctx) => {
       rss,
       day,
       userState.excludeTags,
-      userState.excludeWords
+      userState.excludeWords,
+      redisStore
     );
 
     console.log('вакансии получены Habr.career', vacanciesFiltered.length);
@@ -219,7 +247,7 @@ const getVacancy = async (ctx) => {
     const {
       stringVacancies: stringVacanciesHH,
       vacanciesFiltered: vacanciesFilteredHH,
-    } = await getVacanciesHeadHunter(dayUnix, userState.HH.filter, userState.HH.words);
+    } = await getVacanciesHeadHunter(dayUnix, userState.HH.filter, userState.HH.words, redisStore);
 
     console.log('вакансии получены HeadHunter', vacanciesFilteredHH.length);
     const allVacancies = [...stringVacancies, ...stringVacanciesHH];
@@ -257,11 +285,11 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
   }
   bot.telegram.webhookReply = false;
 
-  userState.subIntervalId.push(
-    setTimeout(async () => {
-      await getVacancySub(bot, chatId, userId, false, intervalPingMs);
-    }, intervalPingMs)
-  ); // раз в 5 минуту
+  const newIntervalId = setTimeout(async () => {
+    await getVacancySub(bot, chatId, userId, false, intervalPingMs);
+  }, intervalPingMs);
+
+  userState.subIntervalId.push(Number(newIntervalId)); // раз в 5 минуту
 
   if (!userState.excludeTags.length === 0) {
     sendMD(
@@ -278,7 +306,8 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
       rss,
       isFirstSub ? 7 : 4,
       userState.excludeTags,
-      userState.excludeWords
+      userState.excludeWords,
+      redisStore
     );
     console.log('фильтрованные вакансии Habr.career', vacanciesFiltered.length);
 
@@ -290,11 +319,11 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
       vacanciesFiltered: vacanciesFilteredHH,
       getStringifyVacancies: getStringifyVacanciesHH,
       hashes: hashesHH,
-    } = await getVacanciesHeadHunter(dayUnix, userState.HH.filter, userState.HH.words);
+    } = await getVacanciesHeadHunter(dayUnix, userState.HH.filter, userState.HH.words, redisStore);
 
     console.log('фильтрованные вакансии HeadHunter', vacanciesFilteredHH.length);
 
-    const newHashes = [...hashes, ...hashesHH].filter((vac) => !existHashes.has(vac));
+    const newHashes = [...hashes, ...hashesHH].filter((vac) => !existHashes.includes(vac));
 
     if (!newHashes.length) {
       console.log('getVacancySub нет новых вакансий');
@@ -303,7 +332,7 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
 
     console.log('getVacancySub получены новые вакансии -', newHashes.length);
     for (const newVac of newHashes) {
-      userState.hashes.add(newVac);
+      userState.hashes.push(newVac);
     }
     if (isFirstSub) {
       console.log('getVacancySub isFirstSub -> return');

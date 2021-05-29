@@ -1,16 +1,16 @@
 import dayjs from 'dayjs';
 import axios from 'axios';
 import qs from 'qs';
-import LRU from 'lru-cache';
+// import LRU from 'lru-cache';
 import { parseVacanciesFromDom, parseSalaryFromTitleHH } from './dom-parser.js';
 import { requestConfig, syntaxSearch as syntax, filterVacanciesSearchBase } from './config.js';
 import { delayMs, getHashByStr } from '../utils/utils.js';
 import { getCurrencyRates } from '../utils/api_currency.js';
 
-export const cache = new LRU({
-  max: 1000,
-  maxAge: 1000 * 60 * 60 * 24 * 10, // 10 days
-});
+// export const cache = new LRU({
+//   max: 1000,
+//   maxAge: 1000 * 60 * 60 * 24 * 10, // 10 days
+// });
 
 const getStringifyVacancy = ({
   title = '',
@@ -66,6 +66,7 @@ const formatFilterSort = (
   vacanciesRaw,
   baseCurrency = 'RUB',
   rates = { RUB: 75, USD: 1 },
+  minSalary = 0,
   maxSalary = Infinity
 ) => {
   const vacancies = vacanciesRaw
@@ -77,7 +78,10 @@ const formatFilterSort = (
       }
       return { ...vacancy, salary };
     })
-    .filter(({ salary: { avg, isSalaryDefine } }) => !isSalaryDefine || avg < maxSalary)
+    .filter(
+      ({ salary: { avg, isSalaryDefine } }) =>
+        !isSalaryDefine || (avg >= minSalary && avg <= maxSalary)
+    )
     .sort(({ salary: { avgUSD: A } }, { salary: { avgUSD: B } }) => B - A);
 
   return vacancies;
@@ -87,7 +91,9 @@ const requestVacanciesHeadHunter = async (
   userFilter,
   userWords,
   lastRequestTime = dayjs().startOf('day').unix(),
-  maxSalary = Infinity
+  minSalary = 0,
+  maxSalary = Infinity,
+  redisCache
 ) => {
   const rates = await getCurrencyRates();
   const filter = createFilterSearch(userFilter, userWords, lastRequestTime);
@@ -96,8 +102,8 @@ const requestVacanciesHeadHunter = async (
   );
   const keyCache = getHashByStr(urlRaw.toString());
 
-  if (cache.has(keyCache)) {
-    return { vacanciesData: cache.get(keyCache), getStringifyVacancies };
+  if (await redisCache.exists(keyCache)) {
+    return { vacanciesData: JSON.parse(await redisCache.get(keyCache)), getStringifyVacancies };
   }
   console.log('request vacancies HeadHunter', urlRaw.toString());
 
@@ -118,7 +124,7 @@ const requestVacanciesHeadHunter = async (
 
       pageMax = Math.ceil(vacanciesCount / 20);
 
-      vacanciesData = formatFilterSort(vacanciesDataRaw, 'RUB', rates, maxSalary);
+      vacanciesData = formatFilterSort(vacanciesDataRaw, 'RUB', rates, minSalary, maxSalary);
       vacancies.push(...vacanciesData);
 
       if (vacanciesData.length === 0) {
@@ -133,7 +139,7 @@ const requestVacanciesHeadHunter = async (
     await delayMs(1000);
   }
 
-  cache.set(keyCache, vacancies); // 1 hour
+  redisCache.set(keyCache, JSON.stringify(vacancies), 'EX', 60 * 60 * 24 * 10); // 1 hour
 
   return { vacanciesData: vacancies, getStringifyVacancies };
 };

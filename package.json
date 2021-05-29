@@ -23,6 +23,7 @@
     "currency-formatter": "^1.5.7",
     "dayjs": "^1.10.4",
     "dotenv": "^8.6.0",
+    "ioredis": "^4.27.3",
     "jsdom": "^16.5.3",
     "lodash": "^4.17.21",
     "lru-cache": "^6.0.0",

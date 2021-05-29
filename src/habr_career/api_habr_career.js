@@ -4,15 +4,15 @@ import qs from 'qs';
 import _ from 'lodash';
 import dayjs from 'dayjs';
 import dayjsRelativeTime from 'dayjs/plugin/relativeTime.js';
-import LRU from 'lru-cache';
+// import LRU from 'lru-cache';
 
 import { delayMs, getHashByStr } from '../utils/utils.js';
 import { parseSalaryFromTitleRaw } from '../utils/api_currency.js';
 
-export const cache = new LRU({
-  max: 2000,
-  maxAge: 1000 * 60 * 60 * 24, // 24 hours
-});
+// export const cache = new LRU({
+//   max: 2000,
+//   maxAge: 1000 * 60 * 60 * 24, // 24 hours
+// });
 
 dayjs.extend(dayjsRelativeTime);
 
@@ -21,7 +21,11 @@ const rss = new RssParser();
 const HABR_CAREER_BASE_URL = 'https://career.habr.com';
 const HABR_CAREER_URL_RSS = `${HABR_CAREER_BASE_URL}/vacancies/rss`;
 
-export const getVacancyByFilterFromRssHabrCareer = async (filterParam, fromDayAgo = 14) => {
+export const getVacancyByFilterFromRssHabrCareer = async (
+  filterParam,
+  fromDayAgo = 14,
+  redisCache
+) => {
   let filter = filterParam;
   if (typeof filter === 'string') {
     filter = qs.parse(new URL(filter).search.slice(1));
@@ -43,15 +47,18 @@ export const getVacancyByFilterFromRssHabrCareer = async (filterParam, fromDayAg
 
     let feed = null;
 
-    if (cache.has(keyCache)) {
-      feed = cache.get(keyCache);
+    if (await redisCache.exists(keyCache)) {
+      feed = JSON.parse(await redisCache.get(keyCache));
     } else {
       feed = await rss.parseURL(urlRss.toString());
-      if (page <= 7) {
-        cache.set(keyCache, feed, 1000 * 60 * (3 + 2 * page ** 2)); // 5/11/21/35/53/75/101 минут
-      } else {
-        cache.set(keyCache, feed); // 24 hour
-      }
+
+      redisCache.set(
+        keyCache,
+        JSON.stringify(feed),
+        'EX',
+        page <= 7 ? 60 * (3 + 2 * page ** 2) : 60 * 60 * 24
+      ); // 5/11/21/35/53/75/101 минут
+
       await delayMs(1000);
     }
 
@@ -102,6 +109,7 @@ export const parseFilterFormatVacancies = async (
   vacancyExcludeWordsInDesc,
   maxCountIncludesBadTag = 0,
   maxCountIncludesBadWord = 0,
+  minSalary = 0,
   maxSalary = Infinity
 ) => {
   const vacancyExcludeTagsLC = vacancyExcludeTags.map((tag) => tag.toLowerCase());
@@ -155,7 +163,10 @@ export const parseFilterFormatVacancies = async (
       // console.log('countBadTag <= maxCountIncludesBadTag', { countBadTag, maxCountIncludesBadTag });
       return countBadTag <= maxCountIncludesBadTag && countBadWord <= maxCountIncludesBadWord;
     })
-    .filter(({ salary: { avg, isSalaryDefine } }) => !isSalaryDefine || avg < maxSalary)
+    .filter(
+      ({ salary: { avg, isSalaryDefine } }) =>
+        !isSalaryDefine || (avg >= minSalary && avg <= maxSalary)
+    )
     .sort(({ salary: { avgUSD: A } }, { salary: { avgUSD: B } }) => B - A);
 
   return { vacanciesFiltered, vacancies };

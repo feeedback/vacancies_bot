@@ -13,10 +13,11 @@ const getVacanciesHabrCareer = async (
   url,
   day = 2,
   vacancyExcludeTags = vacancyExcludeTagsMy,
-  vacancyExcludeWordsInDesc = vacancyExcludeWordsInDescMy
+  vacancyExcludeWordsInDesc = vacancyExcludeWordsInDescMy,
+  cache
 ) => {
   const logT = Date.now();
-  const vacanciesRaw = await getVacancyByFilterFromRssHabrCareer(url, day);
+  const vacanciesRaw = await getVacancyByFilterFromRssHabrCareer(url, day, cache);
   const rates = await getCurrencyRates();
   const { vacanciesFiltered, vacancies } = await parseFilterFormatVacancies(
     vacanciesRaw,
@@ -26,6 +27,7 @@ const getVacanciesHabrCareer = async (
     vacancyExcludeWordsInDesc,
     0,
     0,
+    30000,
     250000
   );
   const stringVacancies = getStringifyVacancies(vacanciesFiltered);

@@ -7,14 +7,17 @@ import requestVacancies from './api_hh.js';
 const getVacanciesHeadHunter = async (
   lastRequestTime = dayjs().startOf('day').unix(),
   filter = myFilter,
-  filtersWords = myFiltersWords
+  filtersWords = myFiltersWords,
+  cache
 ) => {
   const logT = Date.now();
   const { vacanciesData: vacanciesFilteredRaw, getStringifyVacancies } = await requestVacancies(
     filter,
     filtersWords,
     lastRequestTime,
-    250000
+    30000,
+    250000,
+    cache
   );
 
   // const vacanciesFiltered = _.uniqBy(vacanciesFilteredRaw, 'hashContent');

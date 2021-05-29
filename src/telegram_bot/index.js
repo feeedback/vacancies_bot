@@ -1,8 +1,6 @@
-import dotenv from 'dotenv';
 import { Telegraf } from 'telegraf';
-import { getHandlers, unsubAll } from './handlers.js';
 
-dotenv.config();
+import { getHandlers, mapUserIdToState, redisStore } from './handlers.js'; // unsubAll
 
 const bot = new Telegraf(process.env.TELEGRAM_BOT_API);
 const handlers = getHandlers(bot);
@@ -38,13 +36,26 @@ bot.on('poll_answer', handlers.onEvent.poll_answer);
 bot.launch();
 
 process.once('SIGINT', () => {
-  unsubAll();
+  // unsubAll();
   bot.stop('SIGINT');
+  redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
+
+  redisStore.quit();
+  console.log('SIGINT');
 });
 process.once('SIGTERM', () => {
-  unsubAll();
+  // unsubAll();
   bot.stop('SIGTERM');
+  redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
+
+  redisStore.quit();
+  console.log('SIGTERM');
 });
-process.on('exit', () => {
-  unsubAll();
-});
+// process.on('exit', () => {
+//   // unsubAll();
+//   // await redis.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
+
+//   // bot.stop('SIGTERM');
+//   // redis.quit();
+//   console.log('exit');
+// });
