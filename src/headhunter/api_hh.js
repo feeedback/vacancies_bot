@@ -38,7 +38,7 @@ const getStringifyVacancy = ({
 
 const getStringifyVacancies = (vacanciesFiltered) => vacanciesFiltered.map(getStringifyVacancy);
 
-const createFilterSearch = (userFilter = {}, userWords = {}, lastRequestTime) => {
+const createFilterSearch = (userFilter = {}, userWords = {}, lastRequestTime, isStartDay) => {
   const { excludeWordTitle = [], excludeWordDesc = [], includeWordDesc = [] } = userWords;
 
   const exTitle = excludeWordTitle.length
@@ -55,7 +55,9 @@ const createFilterSearch = (userFilter = {}, userWords = {}, lastRequestTime) =>
   const filterVariable = {
     ...userFilter,
     ...filterVacanciesSearchBase,
-    date_from: dayjs.unix(lastRequestTime).format('DD.MM.YYYY HH:mm:ss'),
+    date_from: dayjs
+      .unix(lastRequestTime)
+      .format(isStartDay ? 'DD.MM.YYYY' : 'DD.MM.YYYY HH:mm:ss'),
     text: searchText,
   };
 
@@ -90,13 +92,21 @@ const formatFilterSort = (
 const requestVacanciesHeadHunter = async (
   userFilter,
   userWords,
-  lastRequestTime = dayjs().startOf('day').unix(),
+  lastRequestTimeRaw = null,
   minSalary = 0,
   maxSalary = Infinity,
   redisCache
 ) => {
   const rates = await getCurrencyRates();
-  const filter = createFilterSearch(userFilter, userWords, lastRequestTime);
+
+  let lastRequestTime = lastRequestTimeRaw;
+  let isStartDay = false;
+  if (!lastRequestTimeRaw) {
+    lastRequestTime = dayjs().startOf('day').unix();
+    isStartDay = true;
+  }
+
+  const filter = createFilterSearch(userFilter, userWords, lastRequestTime, isStartDay);
   const urlRaw = new URL(
     `${requestConfig.BASE_URL}?${qs.stringify(filter, { arrayFormat: 'repeat' })}`
   );
@@ -139,7 +149,7 @@ const requestVacanciesHeadHunter = async (
     await delayMs(1000);
   }
 
-  redisCache.set(keyCache, JSON.stringify(vacancies), 'EX', 60 * 60 * 24 * 10); // 1 hour
+  redisCache.set(keyCache, JSON.stringify(vacancies), 'EX', isStartDay ? 60 * 60 * 2 : 60 * 5); // 2 hour // 5 min
 
   return { vacanciesData: vacancies, getStringifyVacancies };
 };

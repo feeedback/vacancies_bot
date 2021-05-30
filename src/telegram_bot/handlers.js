@@ -14,6 +14,9 @@ import { nowMsDate, chunkTextBlocksBySizeByte } from '../utils/utils.js';
 
 dotenv.config();
 
+// const INTERVAL_POLL_SUB_MS = 1000 * 60 * 10;
+const INTERVAL_POLL_SUB_MS = 1000 * 60 * 2;
+
 export const redisStore = new Redis({
   port: 14033, // Redis port
   host: 'redis-14033.c239.us-east-1-2.ec2.cloud.redislabs.com', // Redis host
@@ -24,17 +27,6 @@ export const redisStore = new Redis({
 });
 export let mapUserIdToState = { ...initStateUsers };
 
-(async () => {
-  const cachedState = await redisStore.get('mapUserIdToState');
-  console.log(cachedState);
-  if (cachedState) {
-    try {
-      mapUserIdToState = JSON.parse(cachedState);
-    } catch (error) {
-      await redisStore.del('mapUserIdToState');
-    }
-  }
-})();
 const markdownRegexp = new RegExp(`([${markdownEscapes.join('')}])`);
 
 // export const mapUserIdToState = await redisStore.get('mapUserIdToState', mapUserIdToState) || initStateUsers;
@@ -285,27 +277,6 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
   }
   bot.telegram.webhookReply = false;
 
-  const newIntervalId = setTimeout(async () => {
-    await getVacancySub(bot, chatId, userId, false, intervalPingMs);
-  }, intervalPingMs);
-
-  // if (await redisCache.exists(keyCache)) {
-  //   feed = JSON.parse(await redisCache.get(keyCache));
-  // } else {
-  //   feed = await rss.parseURL(urlRss.toString());
-
-  //   redisCache.set(
-  //     keyCache,
-  //     JSON.stringify(feed),
-  //     'EX',
-  //     page <= 7 ? 60 * (3 + 2 * page ** 2) : 60 * 60 * 24
-  //   ); // 5/11/21/35/53/75/101 минут
-
-  //   await delayMs(1000);
-  // }
-
-  userState.subIntervalId.push(Number(newIntervalId)); // раз в 5 минуту
-
   if (!userState.excludeTags.length === 0) {
     sendMD(
       bot,
@@ -380,215 +351,255 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
   }
 };
 
-export const getHandlers = (
+export const getHandlers = async (
   /** @type {Telegraf<import("telegraf").Context<import("typegram").Update>>} */ bot
-) => ({
-  use: [
-    async (ctx, next) => {
-      const d = Date.now();
+) => {
+  (async () => {
+    const cachedState = await redisStore.get('mapUserIdToState');
+    console.log(cachedState);
+
+    if (cachedState) {
       try {
-        await next(); // runs next middleware
+        mapUserIdToState = JSON.parse(cachedState);
+
+        for (const [userId, userState] of Object.entries(mapUserIdToState)) {
+          if (userState.isSub) {
+            const ttlSub = await redisStore.ttl(`sub|${userId}`);
+            setTimeout(async () => {
+              await getVacancySub(bot, +userId, +userId, false, INTERVAL_POLL_SUB_MS);
+
+              const newIntervalId = setInterval(async () => {
+                await getVacancySub(bot, +userId, +userId, false, INTERVAL_POLL_SUB_MS);
+              }, INTERVAL_POLL_SUB_MS);
+
+              userState.subIntervalId.push(Number(newIntervalId)); // раз в 5 минуту
+            }, ttlSub || 0);
+          }
+        }
       } catch (error) {
-        console.log(error);
-        console.log(error.stack);
+        await redisStore.del('mapUserIdToState');
       }
+    }
+  })();
 
-      console.log(`Processing`, Date.now() - d, 'ms');
-      console.log('');
-    },
-  ],
-  start: (ctx) => {
-    const userId = ctx.update.message.from.id;
-    startingUserState(userId);
+  return {
+    use: [
+      async (ctx, next) => {
+        const d = Date.now();
+        try {
+          await next(); // runs next middleware
+        } catch (error) {
+          console.log(error);
+          console.log(error.stack);
+        }
 
-    ctx.replyWithMarkdown(botStartMessage.join('\n'));
-  },
-  settings: async (ctx) => {
-    await ctx.setMyCommands(commandDescription);
-  },
-  help: async (ctx) => {
-    const commands = await ctx.getMyCommands();
-    const info = commands.reduce((acc, val) => `${acc}/${val.command} - ${val.description}\n`, '');
-    return ctx.reply(info);
-  },
-  command: {
-    rss: async (ctx) => {
+        console.log(`Processing`, Date.now() - d, 'ms');
+        console.log('');
+      },
+    ],
+    start: (ctx) => {
       const userId = ctx.update.message.from.id;
-      if (!mapUserIdToState[userId]?.isStarted) {
-        startingUserState(userId);
-      }
+      startingUserState(userId);
 
-      if (ctx.update.message.text.trim() === '/rss') {
-        const message = await ctx.reply(
-          'Пожалуйста, скопируйте сюда RSS ссылку из поиска с Вашим фильтром из https://career.habr.com/vacancies',
+      ctx.replyWithMarkdown(botStartMessage.join('\n'));
+    },
+    settings: async (ctx) => {
+      await ctx.setMyCommands(commandDescription);
+    },
+    help: async (ctx) => {
+      const commands = await ctx.getMyCommands();
+      const info = commands.reduce(
+        (acc, val) => `${acc}/${val.command} - ${val.description}\n`,
+        ''
+      );
+      return ctx.reply(info);
+    },
+    command: {
+      rss: async (ctx) => {
+        const userId = ctx.update.message.from.id;
+        if (!mapUserIdToState[userId]?.isStarted) {
+          startingUserState(userId);
+        }
+
+        if (ctx.update.message.text.trim() === '/rss') {
+          const message = await ctx.reply(
+            'Пожалуйста, скопируйте сюда RSS ссылку из поиска с Вашим фильтром из https://career.habr.com/vacancies',
+            { disable_web_page_preview: true }
+          );
+          mapUserIdToState[userId].rssMessageID = message.message_id;
+          return;
+        }
+        // если ссылка уже передана в команде
+        const rss = ctx.update.message.text.slice(5).trim();
+        await setRss(ctx, rss);
+      },
+      extagsset: async (ctx) => {
+        await setExcludeTags(ctx);
+      },
+      extags: async (ctx) => {
+        const userId = ctx.update.message.from.id;
+        if (!mapUserIdToState[userId]?.isStarted) {
+          startingUserState(userId);
+        }
+
+        ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
+        if (mapUserIdToState[userId].excludeTags.length === 0) {
+          ctx.replyWithMarkdown(
+            'Ваш список исключаемых тегов пуст. Вы можете добавить их командой */extagsset*'
+          );
+          return;
+        }
+        const tagsStr = mapUserIdToState[userId].excludeTags
+          // eslint-disable-next-line prettier/prettier
+          .map((tag) => `  \`#${tag.replace(markdownRegexp, '$1')}\``)
+          .join('\n');
+
+        ctx.replyWithMarkdown(
+          `*Ваши исключаемые теги:*\n${tagsStr}\n\nВы можете добавить в список ещё */extagsadd* (или задать заново */extagsset*)`,
           { disable_web_page_preview: true }
         );
-        mapUserIdToState[userId].rssMessageID = message.message_id;
-        return;
-      }
-      // если ссылка уже передана в команде
-      const rss = ctx.update.message.text.slice(5).trim();
-      await setRss(ctx, rss);
-    },
-    extagsset: async (ctx) => {
-      await setExcludeTags(ctx);
-    },
-    extags: async (ctx) => {
-      const userId = ctx.update.message.from.id;
-      if (!mapUserIdToState[userId]?.isStarted) {
-        startingUserState(userId);
-      }
-
-      ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
-      if (mapUserIdToState[userId].excludeTags.length === 0) {
-        ctx.replyWithMarkdown(
-          'Ваш список исключаемых тегов пуст. Вы можете добавить их командой */extagsset*'
-        );
-        return;
-      }
-      const tagsStr = mapUserIdToState[userId].excludeTags
-        // eslint-disable-next-line prettier/prettier
-        .map((tag) => `  \`#${tag.replace(markdownRegexp, '$1')}\``)
-        .join('\n');
-
-      ctx.replyWithMarkdown(
-        `*Ваши исключаемые теги:*\n${tagsStr}\n\nВы можете добавить в список ещё */extagsadd* (или задать заново */extagsset*)`,
-        { disable_web_page_preview: true }
-      );
-    },
-    extagsadd: async (ctx) => {
-      await setExcludeTags(ctx, true);
-    },
-    exwordsset: async (ctx) => {
-      await setExcludeWords(ctx);
-    },
-    exwords: async (ctx) => {
-      const userId = ctx.update.message.from.id;
-      if (!mapUserIdToState[userId]?.isStarted) {
-        startingUserState(userId);
-      }
-      ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
-      if (mapUserIdToState[userId].excludeWords.length === 0) {
-        ctx.replyWithMarkdown(
-          'Ваш список исключаемых слов пуст. Вы можете добавить их командой */exwordsset*'
-        );
-        return;
-      }
-      const wordsStr = mapUserIdToState[userId].excludeWords
-        // eslint-disable-next-line prettier/prettier
-        .map((word) => `  \`${word.replace(markdownRegexp, '$1')}\``)
-        .join('\n');
-
-      ctx.replyWithMarkdown(
-        `*Ваши исключаемые слова:*\n${wordsStr}\n\nВы можете добавить в список ещё */exwordsadd* (или задать заново */exwordsset*)`,
-        { disable_web_page_preview: true }
-      );
-    },
-    exwordsadd: async (ctx) => {
-      await setExcludeWords(ctx, true);
-    },
-
-    get: async (ctx) => {
-      await getVacancy(ctx);
-    },
-    sub: async (ctx) => {
-      const userId = ctx.update.message.from.id;
-      const chatId = ctx.update.message.chat.id;
-      if (!mapUserIdToState[userId]?.isStarted) {
-        startingUserState(userId);
-      }
-      ctx.telegram.sendChatAction(chatId, 'typing');
-
-      if (!mapUserIdToState[userId].rss) {
-        ctx.replyWithMarkdown('RSS not found! Please add that with */rss* [link]');
-        console.log('user id', userId, 'not found rss');
-        return;
-      }
-
-      if (mapUserIdToState[userId].isSub) {
-        ctx.replyWithMarkdown('Вы *уже подписаны*!\nОтписаться можно командой */unsub*');
-        console.log('user id', userId, 'sub fail - yet sub');
-        return;
-      }
-
-      ctx.replyWithMarkdown(
-        'Вы успешно *подписаны* на уведомления о новых вакансий!\nОтписаться можно командой */unsub*'
-      );
-      console.log('user id', userId, 'sub success');
-      mapUserIdToState[userId].isSub = true;
-      await getVacancySub(bot, chatId, userId, true, 1000 * 60 * 10);
-    },
-    unsub: async (ctx) => {
-      const userId = ctx.update.message.from.id;
-      if (!mapUserIdToState[userId]?.isStarted) {
-        startingUserState(userId);
-      }
-      if (!mapUserIdToState[userId].isSub) {
-        ctx.replyWithMarkdown('Вы не подписаны!\nПодписаться можно командой */sub*');
-        console.log('user id', userId, 'not found sub id');
-        return;
-      }
-
-      for (const subId of mapUserIdToState[userId].subIntervalId) {
-        clearInterval(subId);
-      }
-      mapUserIdToState[userId].isSub = false;
-
-      ctx.replyWithMarkdown(
-        'Вы успешно *отписаны* от уведомления о новых вакансий!\nПодписаться снова можно командой */sub*'
-      );
-      console.log('user id', userId, 'unsub success');
-    },
-  },
-  onEvent: {
-    textH: async (ctx) => {
-      const userId = ctx.update.message.from.id;
-      if (!mapUserIdToState[userId]?.isStarted) {
-        startingUserState(userId);
-      }
-      const isRss = mapUserIdToState[userId]?.rssMessageID;
-
-      if (isRss) {
-        if (ctx.message.message_id === isRss + 1) {
-          await setRss(ctx, ctx.update.message.text);
-        } else {
-          delete mapUserIdToState[userId].rssMessageID;
+      },
+      extagsadd: async (ctx) => {
+        await setExcludeTags(ctx, true);
+      },
+      exwordsset: async (ctx) => {
+        await setExcludeWords(ctx);
+      },
+      exwords: async (ctx) => {
+        const userId = ctx.update.message.from.id;
+        if (!mapUserIdToState[userId]?.isStarted) {
+          startingUserState(userId);
         }
-      }
-    },
-    poll_answer: (ctx) => {
-      const { poll_answer: poll } = ctx.update;
+        ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
+        if (mapUserIdToState[userId].excludeWords.length === 0) {
+          ctx.replyWithMarkdown(
+            'Ваш список исключаемых слов пуст. Вы можете добавить их командой */exwordsset*'
+          );
+          return;
+        }
+        const wordsStr = mapUserIdToState[userId].excludeWords
+          // eslint-disable-next-line prettier/prettier
+          .map((word) => `  \`${word.replace(markdownRegexp, '$1')}\``)
+          .join('\n');
 
-      if (poll.user.is_bot) {
-        return;
-      }
-      const userId = poll.user.id;
-
-      if (mapUserIdToState[userId].pollOptionsExTags[poll.poll_id]) {
-        const excludeTags = poll.option_ids.map(
-          (index) => mapUserIdToState[userId].pollOptionsExTags[poll.poll_id][index]
+        ctx.replyWithMarkdown(
+          `*Ваши исключаемые слова:*\n${wordsStr}\n\nВы можете добавить в список ещё */exwordsadd* (или задать заново */exwordsset*)`,
+          { disable_web_page_preview: true }
         );
-        mapUserIdToState[userId].excludeTags = [
-          ...mapUserIdToState[userId].excludeTags,
-          ...excludeTags,
-        ];
-        console.log('excludeTags updated', mapUserIdToState[userId].excludeTags);
-        return;
-      }
+      },
+      exwordsadd: async (ctx) => {
+        await setExcludeWords(ctx, true);
+      },
 
-      if (mapUserIdToState[userId].pollOptionsExWords[poll.poll_id]) {
-        const excludeWords = poll.option_ids.map(
-          (index) => mapUserIdToState[userId].pollOptionsExWords[poll.poll_id][index]
+      get: async (ctx) => {
+        await getVacancy(ctx);
+      },
+      sub: async (ctx) => {
+        const userId = ctx.update.message.from.id;
+        const chatId = ctx.update.message.chat.id;
+        if (!mapUserIdToState[userId]?.isStarted) {
+          startingUserState(userId);
+        }
+        ctx.telegram.sendChatAction(chatId, 'typing');
+
+        if (!mapUserIdToState[userId].rss) {
+          ctx.replyWithMarkdown('RSS not found! Please add that with */rss* [link]');
+          console.log('user id', userId, 'not found rss');
+          return;
+        }
+
+        if (mapUserIdToState[userId].isSub) {
+          ctx.replyWithMarkdown('Вы *уже подписаны*!\nОтписаться можно командой */unsub*');
+          console.log('user id', userId, 'sub fail - yet sub');
+          return;
+        }
+
+        ctx.replyWithMarkdown(
+          'Вы успешно *подписаны* на уведомления о новых вакансий!\nОтписаться можно командой */unsub*'
         );
-        mapUserIdToState[userId].excludeWords = [
-          ...mapUserIdToState[userId].excludeWords,
-          ...excludeWords,
-        ];
-        console.log('excludeWords updated', mapUserIdToState[userId].excludeWords);
-      }
+        console.log('user id', userId, 'sub success');
+        mapUserIdToState[userId].isSub = true;
+
+        const newIntervalId = setInterval(async () => {
+          await getVacancySub(bot, chatId, userId, false, INTERVAL_POLL_SUB_MS);
+        }, INTERVAL_POLL_SUB_MS);
+
+        mapUserIdToState[userId].subIntervalId.push(Number(newIntervalId)); // раз в 5 минуту
+
+        await getVacancySub(bot, chatId, userId, true, INTERVAL_POLL_SUB_MS);
+      },
+      unsub: async (ctx) => {
+        const userId = ctx.update.message.from.id;
+        if (!mapUserIdToState[userId]?.isStarted) {
+          startingUserState(userId);
+        }
+        if (!mapUserIdToState[userId].isSub) {
+          ctx.replyWithMarkdown('Вы не подписаны!\nПодписаться можно командой */sub*');
+          console.log('user id', userId, 'not found sub id');
+          return;
+        }
+
+        for (const subId of mapUserIdToState[userId].subIntervalId) {
+          clearInterval(subId);
+        }
+        mapUserIdToState[userId].isSub = false;
+
+        ctx.replyWithMarkdown(
+          'Вы успешно *отписаны* от уведомления о новых вакансий!\nПодписаться снова можно командой */sub*'
+        );
+        console.log('user id', userId, 'unsub success');
+      },
     },
-  },
-});
+    onEvent: {
+      textH: async (ctx) => {
+        const userId = ctx.update.message.from.id;
+        if (!mapUserIdToState[userId]?.isStarted) {
+          startingUserState(userId);
+        }
+        const isRss = mapUserIdToState[userId]?.rssMessageID;
+
+        if (isRss) {
+          if (ctx.message.message_id === isRss + 1) {
+            await setRss(ctx, ctx.update.message.text);
+          } else {
+            delete mapUserIdToState[userId].rssMessageID;
+          }
+        }
+      },
+      poll_answer: (ctx) => {
+        const { poll_answer: poll } = ctx.update;
+
+        if (poll.user.is_bot) {
+          return;
+        }
+        const userId = poll.user.id;
+
+        if (mapUserIdToState[userId].pollOptionsExTags[poll.poll_id]) {
+          const excludeTags = poll.option_ids.map(
+            (index) => mapUserIdToState[userId].pollOptionsExTags[poll.poll_id][index]
+          );
+          mapUserIdToState[userId].excludeTags = [
+            ...mapUserIdToState[userId].excludeTags,
+            ...excludeTags,
+          ];
+          console.log('excludeTags updated', mapUserIdToState[userId].excludeTags);
+          return;
+        }
+
+        if (mapUserIdToState[userId].pollOptionsExWords[poll.poll_id]) {
+          const excludeWords = poll.option_ids.map(
+            (index) => mapUserIdToState[userId].pollOptionsExWords[poll.poll_id][index]
+          );
+          mapUserIdToState[userId].excludeWords = [
+            ...mapUserIdToState[userId].excludeWords,
+            ...excludeWords,
+          ];
+          console.log('excludeWords updated', mapUserIdToState[userId].excludeWords);
+        }
+      },
+    },
+  };
+};
 
 export const unsubAll = () => {
   const intervalIds = Object.values(mapUserIdToState)
@@ -597,5 +608,9 @@ export const unsubAll = () => {
 
   for (const subId of intervalIds) {
     clearInterval(subId);
+  }
+  // eslint-disable-next-line guard-for-in
+  for (const userId in mapUserIdToState) {
+    mapUserIdToState[userId].subIntervalId = [];
   }
 };

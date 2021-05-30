@@ -56,8 +56,8 @@ export const getVacancyByFilterFromRssHabrCareer = async (
         keyCache,
         JSON.stringify(feed),
         'EX',
-        page <= 7 ? 60 * (3 + 2 * page ** 2) : 60 * 60 * 24
-      ); // 5/11/21/35/53/75/101 минут
+        page <= 6 ? 60 * Math.round(4 + page ** 3.5) : 60 * 60 * 24
+      ); // 5, 15, 50, 132, 283 минут
 
       await delayMs(1000);
     }
