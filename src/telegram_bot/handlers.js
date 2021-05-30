@@ -15,7 +15,7 @@ import { nowMsDate, chunkTextBlocksBySizeByte } from '../utils/utils.js';
 dotenv.config();
 
 // const INTERVAL_POLL_SUB_MS = 1000 * 60 * 10;
-const INTERVAL_POLL_SUB_MS = 1000 * 60 * 2;
+const INTERVAL_POLL_SUB_MS = 1000 * 60 * 10;
 
 export const redisStore = new Redis({
   port: 14033, // Redis port
@@ -364,16 +364,18 @@ export const getHandlers = async (
 
         for (const [userId, userState] of Object.entries(mapUserIdToState)) {
           if (userState.isSub) {
-            const ttlSub = await redisStore.ttl(`sub|${userId}`);
-            setTimeout(async () => {
+            // const ttlSub = await redisStore.ttl(`sub|${userId}`);
+
+            // setTimeout(async () => {
+            await getVacancySub(bot, +userId, +userId, false, INTERVAL_POLL_SUB_MS);
+
+            const newIntervalId = setInterval(async () => {
               await getVacancySub(bot, +userId, +userId, false, INTERVAL_POLL_SUB_MS);
+            }, INTERVAL_POLL_SUB_MS);
 
-              const newIntervalId = setInterval(async () => {
-                await getVacancySub(bot, +userId, +userId, false, INTERVAL_POLL_SUB_MS);
-              }, INTERVAL_POLL_SUB_MS);
-
-              userState.subIntervalId.push(Number(newIntervalId)); // раз в 5 минуту
-            }, ttlSub || 0);
+            userState.subIntervalId.push(Number(newIntervalId)); // раз в 5 минуту
+            // }, 0);
+            // }, ttlSub || 0);
           }
         }
       } catch (error) {
@@ -603,8 +605,9 @@ export const getHandlers = async (
 
 export const unsubAll = () => {
   const intervalIds = Object.values(mapUserIdToState)
-    .map((userState) => userState.subIntervalId)
-    .filter((id) => Number.isInteger(id));
+    .flatMap((userState) => userState.subIntervalId)
+    .filter((id) => Number.isInteger(+id));
+  console.log('intervalIds', intervalIds);
 
   for (const subId of intervalIds) {
     clearInterval(subId);
