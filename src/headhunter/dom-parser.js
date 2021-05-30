@@ -25,19 +25,23 @@ export const parseSalaryFromTitleHH = (
   baseCurrency = 'RUB',
   rates = { RUB: 75, USD: 1 }
 ) => {
-  const regExpPatternSalary = /(?:(?:^(?:от)\s*(?:(\d[\s\d]*\d)+))|(?:^(?:до)\s*(?:(\d[\s\d]*\d)+))|(?:^(?:(\d[\s\d]*\d)+)-(?:(\d[\s\d]*\d)+)))(?: (.+)$)/i;
+  // const regExpPatternSalary = /(?:(?:^(?:от)\s*(?:(\d[\s\d]*\d)+))|(?:^(?:до)\s*(?:(\d[\s\d]*\d)+))|(?:^(?:(\d[\s\d]*\d)+)\s[−‐‑-ꟷー一]\s(?:(\d[\s\d]*\d)+)))(?: (.+)$)/i;
+  const regExpPatternSalary = /(?:(?:^(?:от)\s*(?:(\d[\s\d]*\d)+))|(?:^(?:до)\s*(?:(\d[\s\d]*\d)+))|(?:^(?:(\d[\s\d]*\d)+)\s*.?\s*(?:(\d[\s\d]*\d)+)))(?: (.+)$)/i;
   const mapCurrencyStrToSymbol = {
     'USD': '$',
     'руб.': '₽',
   };
   const salary = stringTitleVacancy.match(regExpPatternSalary);
+
   if (!salary) {
     return { isSalaryDefine: false, avg: null, avgUSD: null, fork: null, forkUSD: null };
   }
+
   const [, rawMin, rawMax, rawFrom, rawTo, rawCurrencyStr] = salary;
   const min = rawFrom ?? rawMin;
   const max = rawTo ?? rawMax;
   const rawCurrencySymbol = mapCurrencyStrToSymbol[rawCurrencyStr];
+
   return parseSalaryFromTitleRaw(baseCurrency, rates, min, max, rawCurrencySymbol);
 };
 

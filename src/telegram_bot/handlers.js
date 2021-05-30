@@ -20,7 +20,7 @@ export const redisStore = new Redis({
   family: 4, // 4 (IPv4) or 6 (IPv6)
   password: process.env.REDIS_PASS,
   db: 0,
-  maxRetriesPerRequest: 1,
+  // maxRetriesPerRequest: 1,
 });
 export let mapUserIdToState = { ...initStateUsers };
 
@@ -288,6 +288,21 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
   const newIntervalId = setTimeout(async () => {
     await getVacancySub(bot, chatId, userId, false, intervalPingMs);
   }, intervalPingMs);
+
+  // if (await redisCache.exists(keyCache)) {
+  //   feed = JSON.parse(await redisCache.get(keyCache));
+  // } else {
+  //   feed = await rss.parseURL(urlRss.toString());
+
+  //   redisCache.set(
+  //     keyCache,
+  //     JSON.stringify(feed),
+  //     'EX',
+  //     page <= 7 ? 60 * (3 + 2 * page ** 2) : 60 * 60 * 24
+  //   ); // 5/11/21/35/53/75/101 минут
+
+  //   await delayMs(1000);
+  // }
 
   userState.subIntervalId.push(Number(newIntervalId)); // раз в 5 минуту
 
