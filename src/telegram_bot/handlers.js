@@ -284,22 +284,24 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
       '_Ваш список исключаемых тегов пуст. Вы можете добавить их командой */extagsset*_'
     );
   }
+  await redisStore.set(`sub|${userId}`, dayjs().unix());
 
   const existHashes = userState.hashes;
 
   try {
     const { hashes, vacanciesFiltered, getStringifyVacancies } = await getVacanciesHabrCareer(
       rss,
-      isFirstSub ? 7 : 4,
+      isFirstSub ? 7 : 3,
       userState.excludeTags,
       userState.excludeWords,
       redisStore
     );
     console.log('фильтрованные вакансии Habr.career', vacanciesFiltered.length);
 
-    const dayUnix = dayjs()
-      .subtract(intervalPingMs + 5000, 'ms')
-      .unix();
+    const dayUnix = (isFirstSub
+      ? dayjs().subtract(7, 'day')
+      : dayjs().subtract(intervalPingMs + 5000, 'ms')
+    ).unix();
 
     const {
       vacanciesFiltered: vacanciesFilteredHH,
@@ -365,9 +367,23 @@ export const getHandlers = async (
         for (const [userId, userState] of Object.entries(mapUserIdToState)) {
           if (userState.isSub) {
             // const ttlSub = await redisStore.ttl(`sub|${userId}`);
+            const timeLastPollSub = await redisStore.get(`sub|${userId}`);
+            let lastTimeDiff = INTERVAL_POLL_SUB_MS;
+
+            console.log('Последний запуск был', dayjs.unix(timeLastPollSub).fromNow());
+
+            if (timeLastPollSub) {
+              if (dayjs.unix(timeLastPollSub).isBefore(dayjs().subtract(3, 'day'))) {
+                console.log(
+                  'Последний запрос вакансий (запуск программы и getVacancySub) было позже 3 дней назад, выводятся только новые вакансии с этого момента'
+                );
+              } else {
+                lastTimeDiff = (dayjs().unix() - timeLastPollSub) * 1000;
+              }
+            }
 
             // setTimeout(async () => {
-            await getVacancySub(bot, +userId, +userId, false, INTERVAL_POLL_SUB_MS);
+            await getVacancySub(bot, +userId, +userId, false, lastTimeDiff);
 
             const newIntervalId = setInterval(async () => {
               await getVacancySub(bot, +userId, +userId, false, INTERVAL_POLL_SUB_MS);

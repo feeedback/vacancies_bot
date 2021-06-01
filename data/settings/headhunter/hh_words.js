@@ -65,6 +65,9 @@ export const excludeWordTitle = [
   'design*',
   '1С-*',
   'Bitrix*',
+  'Битрикс*',
+  '(Битрикс*',
+  'CS-Cart*',
   'Laravel*',
   'Symfony*',
   'Security',
@@ -79,7 +82,11 @@ export const excludeWordTitle = [
   'ExtJS*',
   '"Ext.JS"',
   'Куратор',
+  'Oracle',
+  'HTML*',
+  'Magento',
   '".NET+C#"',
+  '"1C"',
 ];
 
 export const excludeWordDesc = [
