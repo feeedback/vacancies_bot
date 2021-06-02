@@ -66,7 +66,6 @@ export const excludeWordTitle = [
   '1С-*',
   'Bitrix*',
   'Битрикс*',
-  '(Битрикс*',
   'CS-Cart*',
   'Laravel*',
   'Symfony*',
@@ -87,11 +86,13 @@ export const excludeWordTitle = [
   'Magento',
   '".NET+C#"',
   '"1C"',
+  '"ASP"',
 ];
 
 export const excludeWordDesc = [
   // '"C#"',
   // '"1C"',
+  '"ASP.NET"',
   '"laravel"',
   // '"PHP"',
   // '"django"',

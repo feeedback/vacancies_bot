@@ -236,6 +236,7 @@ const getVacancy = async (ctx) => {
       .startOf('day')
       .subtract(day - 1, 'day')
       .unix();
+
     const {
       stringVacancies: stringVacanciesHH,
       vacanciesFiltered: vacanciesFilteredHH,
@@ -358,11 +359,20 @@ export const getHandlers = async (
 ) => {
   (async () => {
     const cachedState = await redisStore.get('mapUserIdToState');
-    console.log(cachedState);
 
     if (cachedState) {
       try {
-        mapUserIdToState = JSON.parse(cachedState);
+        mapUserIdToState = _.mergeWith(
+          initStateUsers,
+          JSON.parse(cachedState),
+          // eslint-disable-next-line consistent-return
+          (objValue, srcValue) => {
+            if (Array.isArray(objValue)) {
+              return _.uniq(objValue.concat(srcValue));
+            }
+          }
+        );
+        console.log(mapUserIdToState);
 
         for (const [userId, userState] of Object.entries(mapUserIdToState)) {
           if (userState.isSub) {

@@ -7,7 +7,8 @@ import path from 'path';
 import crypto from 'crypto';
 import dayjs from 'dayjs';
 
-export const getHashByStr = (str) => crypto.createHash('sha256').update(str, 'utf8').digest('hex');
+export const getHashByStr = (str, hashType = 'sha256') =>
+  crypto.createHash(hashType).update(str, 'utf8').digest('hex');
 
 export const delayMs = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -54,4 +55,6 @@ export const chunkTextBlocksBySizeByte = (textBlocks, maxSize = 4096) => {
 export const getStringSimilarity = (str1 = '', str2 = '') =>
   stringSimilarity.compareTwoStrings(str1, str2);
 
-// console.log(getStringSimilarity());
+// console.log(getHashByStr('a:1').length);
+// console.log(getHashByStr('a:1', 'md5').length);
+// console.log(crypto.getHashes());

@@ -32,4 +32,5 @@ export default [
   '1С-Bitrix',
   'Ruby',
   'Python',
+  'Drupal',
 ];
