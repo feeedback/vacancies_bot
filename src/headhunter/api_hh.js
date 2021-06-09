@@ -103,8 +103,12 @@ const requestVacanciesHeadHunter = async (
   let isStartDay = false;
   if (!lastRequestTimeRaw) {
     lastRequestTime = dayjs().startOf('day').unix();
+
     isStartDay = true;
   }
+  // let isStartOldDay = false;
+  // isStartOldDay = lastRequestTime !== dayjs().startOf('day').unix() && dayjs.unix().format('HH:mm:ss') === '00:00:00';
+  // можно добавить что когда запрашивается /get 2,3,... то не отображается текущий день, чтобы можно было сохранять в кэш
 
   const filter = createFilterSearch(userFilter, userWords, lastRequestTime, isStartDay);
   const urlRaw = new URL(
@@ -113,7 +117,14 @@ const requestVacanciesHeadHunter = async (
   const keyCache = getHashByStr(urlRaw.toString());
 
   if (await redisCache.exists(keyCache)) {
-    return { vacanciesData: JSON.parse(await redisCache.get(keyCache)), getStringifyVacancies };
+    const cachedVacanciesData = JSON.parse(await redisCache.get(keyCache)).map((vacancy) => ({
+      ...vacancy,
+      ago: dayjs.unix(vacancy.createdAt).fromNow(),
+    }));
+    return {
+      vacanciesData: cachedVacanciesData,
+      getStringifyVacancies,
+    };
   }
   console.log('request vacancies HeadHunter', urlRaw.toString());
 
@@ -130,7 +141,10 @@ const requestVacanciesHeadHunter = async (
 
     try {
       const res = await axios.get(url, { headers: requestConfig.headers });
-      const { vacanciesDataRaw, vacanciesCount } = parseVacanciesFromDom(res.data);
+      const { vacanciesDataRaw, vacanciesCount } = await parseVacanciesFromDom(
+        res.data,
+        redisCache
+      );
 
       pageMax = Math.ceil(vacanciesCount / 20);
 

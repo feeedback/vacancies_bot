@@ -4,14 +4,14 @@ import dayjsCustomParseFormat from 'dayjs/plugin/customParseFormat.js';
 import dayjsRelativeTime from 'dayjs/plugin/relativeTime.js';
 import dayjsUtc from 'dayjs/plugin/utc.js';
 
-import LRU from 'lru-cache';
+// import LRU from 'lru-cache';
 import { getHashByStr } from '../utils/utils.js';
 import { parseSalaryFromTitleRaw } from '../utils/api_currency.js';
 
-export const cacheHashVacancyCreatedAt = new LRU({
-  max: 10000,
-  maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
-});
+// export const cacheHashVacancyCreatedAt = new LRU({
+//   max: 10000,
+//   maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
+// });
 
 dayjs.extend(dayjsCustomParseFormat);
 dayjs.extend(dayjsRelativeTime);
@@ -51,7 +51,7 @@ export const parseSalaryFromTitleHH = (
 //   return document.querySelectorAll('.bloko-button-group > span').length;
 // };
 
-export const parseVacanciesFromDom = (data) => {
+export const parseVacanciesFromDom = async (data, redisCache) => {
   const document = getDOMDocument(data);
   // console.log(document.documentElement.outerHTML);
   const vacanciesCount = Number(
@@ -65,7 +65,8 @@ export const parseVacanciesFromDom = (data) => {
     return isText ? child?.textContent?.trim() || '' : child;
   };
 
-  const vacanciesDataRaw = vacanciesEl.map((vacancy) => {
+  const vacanciesDataRaw = [];
+  for (const vacancy of vacanciesEl) {
     // console.log('vacancy', '№:', i);
     const getElByAttr = (attr, ...restArgs) => getChildTextByDataAttr(vacancy, attr, ...restArgs);
 
@@ -102,16 +103,18 @@ export const parseVacanciesFromDom = (data) => {
     const content = [title, company, salaryStr, tasks, skills, schedule].join('\n');
     const hashContent = getHashByStr(content);
 
-    const cachedCreatedAt = cacheHashVacancyCreatedAt.get(hashContent);
-
-    const createdAt = cachedCreatedAt ?? dayjs().unix();
-    const ago = dayjs.unix(createdAt).fromNow();
+    const cachedCreatedAt = await redisCache.get(`HH:vacancyCreatedAt:${hashContent}`);
+    const createdAt =
+      cachedCreatedAt ?? dayjs(bumpedAt).isBefore(dayjs().subtract(1, 'day'))
+        ? bumpedAt
+        : dayjs().unix();
+    const ago = dayjs.unix(+createdAt).fromNow();
 
     if (!cachedCreatedAt) {
-      cacheHashVacancyCreatedAt.set(hashContent, createdAt);
+      await redisCache.set(`HH:vacancyCreatedAt:${hashContent}`, createdAt);
     }
 
-    return {
+    vacanciesDataRaw.push({
       id,
       title,
       tasks,
@@ -123,13 +126,14 @@ export const parseVacanciesFromDom = (data) => {
       salaryStr,
       city,
       bumpedAt,
+      createdAt,
       bumpedAgo,
       // content,
       hashContent,
       ago: ago === 'a few seconds ago' ? 'a minute ago' : ago,
       source: 'HEADHUNTER',
-    };
-  });
+    });
+  }
 
   return { vacanciesDataRaw, vacanciesCount };
 };

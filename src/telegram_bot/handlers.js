@@ -292,7 +292,7 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
   try {
     const { hashes, vacanciesFiltered, getStringifyVacancies } = await getVacanciesHabrCareer(
       rss,
-      isFirstSub ? 7 : 3,
+      isFirstSub ? 7 : 4,
       userState.excludeTags,
       userState.excludeWords,
       redisStore
