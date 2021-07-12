@@ -33,4 +33,6 @@ export default [
   'Ruby',
   'Python',
   'Drupal',
+  'Atlassian',
+  'TeamLead',
 ];

@@ -83,10 +83,15 @@ export const excludeWordTitle = [
   'Куратор',
   'Oracle',
   'HTML*',
+  'testing',
+  'Siebel',
+  'React*',
   'Magento',
   '".NET+C#"',
   '"1C"',
   '"ASP"',
+  '"Atlassian"',
+  '"TeamLead"',
 ];
 
 export const excludeWordDesc = [
@@ -94,6 +99,7 @@ export const excludeWordDesc = [
   // '"1C"',
   '"ASP.NET"',
   '"laravel"',
+  '"1С-Битрикс"',
   // '"PHP"',
   // '"django"',
   // '"jQuery"',

@@ -1,3 +1,5 @@
+import _ from 'lodash';
+
 import vacancyExcludeTagsMy from '../../data/settings/habr_career/exclude_tags.js';
 import vacancyExcludeWordsInDescMy from '../../data/settings/habr_career/exclude_words_title.js';
 import {
@@ -17,7 +19,18 @@ const getVacanciesHabrCareer = async (
   cache
 ) => {
   const logT = Date.now();
-  const vacanciesRaw = await getVacancyByFilterFromRssHabrCareer(url, day, cache);
+  let vacanciesRaw = [];
+
+  if (Array.isArray(url)) {
+    const rawHabr = [];
+    for (const urlOne of url) {
+      rawHabr.push(...(await getVacancyByFilterFromRssHabrCareer(urlOne, day, cache)));
+    }
+    vacanciesRaw = _.uniqBy(rawHabr, 'guid');
+  } else {
+    vacanciesRaw = await getVacancyByFilterFromRssHabrCareer(url, day, cache);
+  }
+
   const rates = await getCurrencyRates();
   const { vacanciesFiltered, vacancies } = await parseFilterFormatVacancies(
     vacanciesRaw,

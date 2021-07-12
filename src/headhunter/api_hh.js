@@ -160,7 +160,7 @@ const requestVacanciesHeadHunter = async (
     }
 
     page += 1;
-    await delayMs(1000);
+    await delayMs(500);
   }
 
   redisCache.set(keyCache, JSON.stringify(vacancies), 'EX', isStartDay ? 60 * 60 * 2 : 60 * 5); // 2 hour // 5 min

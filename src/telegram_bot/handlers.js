@@ -199,6 +199,7 @@ const getVacancy = async (ctx) => {
     startingUserState(userId);
   }
   const rss = userState?.rss;
+  const rss2 = userState?.rss2;
 
   if (!rss) {
     ctx.replyWithMarkdown('RSS not found! Please add that with */rss* [link]');
@@ -223,7 +224,7 @@ const getVacancy = async (ctx) => {
 
   try {
     const { stringVacancies, vacanciesFiltered } = await getVacanciesHabrCareer(
-      rss,
+      rss2 ? [rss, rss2] : rss,
       day,
       userState.excludeTags,
       userState.excludeWords,
@@ -270,6 +271,7 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
   // const userId = ctx.update.message.from.id;
   const userState = mapUserIdToState[userId];
   const rss = userState?.rss;
+  const rss2 = userState?.rss2;
 
   if (!rss) {
     sendMD(bot, chatId, 'RSS not found! Please add that with */rss* [link]');
@@ -291,8 +293,8 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
 
   try {
     const { hashes, vacanciesFiltered, getStringifyVacancies } = await getVacanciesHabrCareer(
-      rss,
-      isFirstSub ? 7 : 4,
+      rss2 ? [rss, rss2] : rss,
+      isFirstSub ? 7 : 3,
       userState.excludeTags,
       userState.excludeWords,
       redisStore
@@ -362,9 +364,18 @@ export const getHandlers = async (
 
     if (cachedState) {
       try {
+        const stateFromCache = JSON.parse(cachedState);
+
+        Object.keys(stateFromCache).forEach((userId) => {
+          stateFromCache[userId].HH.filter = initStateUsers[userId].HH.filter;
+          stateFromCache[userId].rss = initStateUsers[userId].rss;
+
+          console.log('filter', stateFromCache[userId].HH.filter);
+        });
+
         mapUserIdToState = _.mergeWith(
           initStateUsers,
-          JSON.parse(cachedState),
+          stateFromCache,
           // eslint-disable-next-line consistent-return
           (objValue, srcValue) => {
             if (Array.isArray(objValue)) {
@@ -372,6 +383,7 @@ export const getHandlers = async (
             }
           }
         );
+
         console.log(mapUserIdToState);
 
         for (const [userId, userState] of Object.entries(mapUserIdToState)) {
