@@ -92,6 +92,9 @@ export const excludeWordTitle = [
   '"ASP"',
   '"Atlassian"',
   '"TeamLead"',
+  '"Drupal"',
+  '"Yii"',
+  '"Frond End"',
 ];
 
 export const excludeWordDesc = [

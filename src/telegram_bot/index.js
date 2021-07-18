@@ -2,7 +2,7 @@ import { Telegraf } from 'telegraf';
 
 import { getHandlers, mapUserIdToState, redisStore, unsubAll } from './handlers.js'; // unsubAll
 
-const bot = new Telegraf(process.env.TELEGRAM_BOT_API);
+const bot = new Telegraf(process.env.TELEGRAM_BOT_API, { handlerTimeout: 5 * 60 * 1_000 });
 
 (async () => {
   const handlers = await getHandlers(bot);

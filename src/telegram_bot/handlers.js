@@ -56,7 +56,7 @@ const startingUserState = (userId) => {
 };
 
 const sendMD = (bot, chatId, msg) =>
-  bot.telegram.sendMessage(chatId, msg, { parse_mode: 'Markdown' });
+  bot.telegram.sendMessage(chatId, msg.replace('`', ''), { parse_mode: 'Markdown' });
 
 const setRss = async (ctx, rss) => {
   let isValidURL = rss.startsWith('https://career.habr.com/vacancies/rss');
@@ -249,7 +249,7 @@ const getVacancy = async (ctx) => {
     for (const messageChunk of chunkTextBlocksBySizeByte(allVacancies, 4096)) {
       ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
 
-      await ctx.reply(messageChunk.join('\n\n'), {
+      await ctx.reply(messageChunk.join('\n\n').replace('`', ''), {
         disable_web_page_preview: true,
         webhookReply: false,
         disable_notification: true,
@@ -343,7 +343,7 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
     ];
 
     for (const messageChunk of chunkTextBlocksBySizeByte(newVacanciesStr, 4096)) {
-      await bot.telegram.sendMessage(chatId, messageChunk.join('\n\n'), {
+      await bot.telegram.sendMessage(chatId, messageChunk.join('\n\n').replace('`', ''), {
         disable_web_page_preview: true,
         parse_mode: 'Markdown',
         // disable_notification: true,
