@@ -1,6 +1,6 @@
 ## Telegram бот для получения вакансий по своему гибкому фильтр
 
-_в разработке..._ [![wakatime](https://wakatime.com/badge/github/feeedback/habr_career_bot.svg)](https://wakatime.com/badge/github/feeedback/habr_career_bot) [![eslint](https://github.com/feeedback/vacancies_bot/actions/workflows/nodejs.yml/badge.svg)](https://github.com/feeedback/vacancies_bot/actions/workflows/nodejs.yml)
+_в разработке..._ [![wakatime](https://wakatime.com/badge/github/feeedback/vacancies_bot.svg)](https://wakatime.com/badge/github/feeedback/vacancies_bot) [![eslint](https://github.com/feeedback/vacancies_bot/actions/workflows/nodejs.yml/badge.svg)](https://github.com/feeedback/vacancies_bot/actions/workflows/nodejs.yml)
 
 ### Roadmap telegram bot
 
