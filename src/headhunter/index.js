@@ -16,7 +16,7 @@ const getVacanciesHeadHunter = async (
     filtersWords,
     lastRequestTime,
     30000,
-    250000,
+    200000,
     cache
   );
 

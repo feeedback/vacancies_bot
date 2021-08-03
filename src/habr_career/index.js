@@ -41,7 +41,7 @@ const getVacanciesHabrCareer = async (
     0,
     0,
     30000,
-    250000
+    200000
   );
   const stringVacancies = getStringifyVacancies(vacanciesFiltered);
 

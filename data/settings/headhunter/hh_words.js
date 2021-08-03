@@ -115,7 +115,14 @@ export const excludeWordTitle = [
   'OpenText',
   'GetCourse',
   'WebTutor',
+  'Tutor',
   'Сетевой',
+  'SharePoint',
+  'WAMP',
+
+  // 'Middle',
+  // 'Full-stack',
+  // 'Fullstack',
 ];
 
 export const excludeWordDesc = [
@@ -133,7 +140,7 @@ export const excludeWordDesc = [
 ];
 
 export const includeWordDesc = [
-  'js',
+  // 'js',
   'javascript*',
   'node*',
   'moleculer*',

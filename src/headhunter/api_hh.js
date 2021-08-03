@@ -81,6 +81,8 @@ const formatFilterSort = (
       return { ...vacancy, salary };
     })
     .filter(
+      // ({ schedule, salary: { avg, isSalaryDefine } }) =>
+      // schedule !== 'Можно удалённо.' &&
       ({ salary: { avg, isSalaryDefine } }) =>
         !isSalaryDefine || (avg >= minSalary && avg <= maxSalary)
     )
