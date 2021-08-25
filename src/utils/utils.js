@@ -1,14 +1,42 @@
+/* eslint-disable no-bitwise */
 import { fileURLToPath } from 'url';
 // import qs from 'qs';
 import stringSimilarity from 'string-similarity';
 // import fs from 'fs';
-// import fs from 'fs';
 import path from 'path';
-import crypto from 'crypto';
+// import crypto from 'crypto';
 import dayjs from 'dayjs';
 
-export const getHashByStr = (str, hashType = 'sha256') =>
-  crypto.createHash(hashType).update(str, 'utf8').digest('hex');
+const cyrb53 = (key, seed = 0) => {
+  // fastest and simple string hash function (10^9 hashes => zero collision)
+  // keys 20 length => 1050 hash/ms, 50 => 750 hash/ms, 500 => 80 hash/ms
+
+  const A = 2654435761;
+  const B = 1597334677;
+  const C = 2246822507;
+  const D = 3266489909;
+  const E = 4294967296;
+  const F = 2097151;
+
+  let h1 = 0xdeadbeef ^ seed;
+  let h2 = 0x41c6ce57 ^ seed;
+
+  for (let index = 0, char; index < key.length; index += 1) {
+    char = key.charCodeAt(index);
+
+    h1 = Math.imul(h1 ^ char, A);
+    h2 = Math.imul(h2 ^ char, B);
+  }
+
+  h1 = Math.imul(h1 ^ (h1 >>> 16), C) ^ Math.imul(h2 ^ (h2 >>> 13), D);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), C) ^ Math.imul(h1 ^ (h1 >>> 13), D);
+
+  return E * (F & h2) + (h1 >>> 0);
+};
+// export const getHashByStr = (str, hashType = 'sha256') =>
+//   crypto.createHash(hashType).update(str, 'utf8').digest('hex');
+
+export const getHashByStr = (key) => cyrb53(key);
 
 export const delayMs = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
