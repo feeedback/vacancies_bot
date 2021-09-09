@@ -18,7 +18,7 @@ export const mapSymbolToCurrencyCode = Object.fromEntries(
   currencySymbols.map(({ symbol, code }) => [symbol, code])
 );
 
-export const getCurrencyRates = async (isTest = false) => {
+export const getCurrencyRates = async (isTest = true) => {
   const ratesFallback = { RUB: 75, USD: 1 };
   if (isTest) {
     return { rates: ratesFallback };
