@@ -119,8 +119,12 @@ export const excludeWordTitle = [
   'Сетевой',
   'SharePoint',
   'WAMP',
-
-  // 'Middle',
+  'Terrasoft',
+  'Creatio',
+  'Haxe*',
+  'Scala*',
+  'Scientist',
+  'CTO',
   // 'Full-stack',
   // 'Fullstack',
 ];
