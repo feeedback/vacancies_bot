@@ -15,13 +15,13 @@ import { nowMsDate, chunkTextBlocksBySizeByte } from '../utils/utils.js';
 dotenv.config();
 
 // const INTERVAL_POLL_SUB_MS = 1000 * 60 * 10;
-const INTERVAL_POLL_SUB_MS = 1000 * 60 * 10;
+const INTERVAL_POLL_SUB_MS = 1000 * 60 * (Number(process.env.INTERVAL_POLL_SUB_MINUTE) || 30);
 
 export const redisStore = new Redis({
   // port: 14033, // Redis port
   // host: 'redis-14033.c239.us-east-1-2.ec2.cloud.redislabs.com', // Redis host
-  port: 6379, // Redis port
-  host: '127.0.0.1', // Redis host
+  port: process.env.REDIS_PORT, // Redis port
+  host: process.env.REDIS_HOST, // Redis host
   family: 4, // 4 (IPv4) or 6 (IPv6)
   // password: process.env.REDIS_PASS,
   db: 0,
