@@ -23,7 +23,7 @@ const BASE_VACANCY_LINK = 'https://hh.ru/vacancy';
 export const parseSalaryFromTitleHH = (
   stringTitleVacancy,
   baseCurrency = 'RUB',
-  rates = { RUB: 75, USD: 1 }
+  rates = { RUB: 65, USD: 1 }
 ) => {
   // const regExpPatternSalary = /(?:(?:^(?:от)\s*(?:(\d[\s\d]*\d)+))|(?:^(?:до)\s*(?:(\d[\s\d]*\d)+))|(?:^(?:(\d[\s\d]*\d)+)\s[−‐‑-ꟷー一]\s(?:(\d[\s\d]*\d)+)))(?: (.+)$)/i;
   const regExpPatternSalary = /(?:(?:^(?:от)\s*(?:(\d[\s\d]*\d)+))|(?:^(?:до)\s*(?:(\d[\s\d]*\d)+))|(?:^(?:(\d[\s\d]*\d)+)\s*.?\s*(?:(\d[\s\d]*\d)+)))(?: (.+)$)/i;
@@ -54,15 +54,23 @@ export const parseSalaryFromTitleHH = (
 export const parseVacanciesFromDom = async (data, redisCache) => {
   const document = getDOMDocument(data);
   // console.log(document.documentElement.outerHTML);
-  const vacanciesCount = Number(
-    document.querySelector(`h1.bloko-header-1`).childNodes[0].textContent
+  let vacanciesCount = Number(
+    // document.querySelector(`h1.bloko-header-1`).childNodes[0].textContent
+    document.querySelector(`h1.bloko-header-section-3`).childNodes[0].textContent
   );
-  const vacanciesEl = [...document.querySelectorAll('.vacancy-serp-item')];
+  if (isNaN(vacanciesCount)) {
+    vacanciesCount = 0;
+  }
+  const vacanciesEl = [...document.querySelectorAll('.serp-item')];
 
   console.log('Получено:', vacanciesEl.length, 'Вакансий — HeadHunter');
   const getChildTextByDataAttr = (el, str, addStr = '', isText = true) => {
     const child = el.querySelector(`[data-qa="${str}"]${addStr ? `${` ${addStr}`}` : ''}`);
     return isText ? child?.textContent?.trim() || '' : child;
+  };
+  const getChildTextBySelector = (el, str) => {
+    const child = el.querySelector(str);
+    return child?.textContent?.trim() || '';
   };
 
   const vacanciesDataRaw = [];
@@ -78,26 +86,23 @@ export const parseVacanciesFromDom = async (data, redisCache) => {
       /<\/?highlighttext>/gi,
       ''
     );
-    const title = getElByAttr('vacancy-serp__vacancy-title');
+    const title = getElByAttr('serp-item__title');
 
-    const id = getElByAttr('vacancy-serp__vacancy-title', '', false)
-      .href.split('?')[0]
-      .split('vacancy/')[1];
+    const id = getElByAttr('serp-item__title', '', false).href.split('?')[0].split('vacancy/')[1];
     const link = `${BASE_VACANCY_LINK}/${id}`;
 
     const salaryStr = getElByAttr('vacancy-serp__vacancy-compensation');
 
-    const scheduleRaw = getElByAttr('vacancy-serp__vacancy-work-schedule');
+    const scheduleRaw = getChildTextBySelector(vacancy, '.search-result-label_work-schedule');
     const schedule = scheduleRaw === 'Можно работать из дома' ? 'Можно удалённо.' : scheduleRaw;
 
     const company = getElByAttr('vacancy-serp__vacancy-employer');
     const address = getElByAttr('vacancy-serp__vacancy-address');
     const city = address.split(',')[0];
 
-    const dateMonthDay = getElByAttr(
-      'vacancy-serp__vacancy-date',
-      '.vacancy-serp-item__publication-date_short'
-    );
+    const dateMonthDay =
+      getElByAttr('vacancy-serp__vacancy-date', '.vacancy-serp-item__publication-date_short') ||
+      dayjs().format('DD-MM');
     const bumpedAt = dayjs.utc(dateMonthDay, 'DD-MM').unix();
     const bumpedAgo = dayjs().to(dayjs.unix(bumpedAt));
     const content = [title, company, salaryStr, tasks, skills, schedule].join('\n');
@@ -134,6 +139,6 @@ export const parseVacanciesFromDom = async (data, redisCache) => {
       source: 'HEADHUNTER',
     });
   }
-
+  console.log({ vacanciesCount });
   return { vacanciesDataRaw, vacanciesCount };
 };

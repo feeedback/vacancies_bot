@@ -18,10 +18,12 @@ dotenv.config();
 const INTERVAL_POLL_SUB_MS = 1000 * 60 * 10;
 
 export const redisStore = new Redis({
-  port: 14033, // Redis port
-  host: 'redis-14033.c239.us-east-1-2.ec2.cloud.redislabs.com', // Redis host
+  // port: 14033, // Redis port
+  // host: 'redis-14033.c239.us-east-1-2.ec2.cloud.redislabs.com', // Redis host
+  port: 6379, // Redis port
+  host: '127.0.0.1', // Redis host
   family: 4, // 4 (IPv4) or 6 (IPv6)
-  password: process.env.REDIS_PASS,
+  // password: process.env.REDIS_PASS,
   db: 0,
   // maxRetriesPerRequest: 1,
 });
@@ -245,6 +247,7 @@ const getVacancy = async (ctx) => {
 
     console.log('вакансии получены HeadHunter', vacanciesFilteredHH.length);
     const allVacancies = [...stringVacancies, ...stringVacanciesHH];
+    // const allVacancies = [...stringVacancies];
 
     for (const messageChunk of chunkTextBlocksBySizeByte(allVacancies, 4096)) {
       ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');

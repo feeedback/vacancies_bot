@@ -19,9 +19,9 @@ export const mapSymbolToCurrencyCode = Object.fromEntries(
 );
 
 export const getCurrencyRates = async (isTest = true) => {
-  const ratesFallback = { RUB: 75, USD: 1 };
+  const ratesFallback = { RUB: 65, USD: 1 };
   if (isTest) {
-    return { rates: ratesFallback };
+    return ratesFallback;
   }
   if (cache.has('rates')) {
     return cache.get('rates');
@@ -40,7 +40,7 @@ export const getCurrencyRates = async (isTest = true) => {
     return rates;
   } catch (error) {
     console.log('error getCurrencyRates', error);
-    return { rates: ratesFallback };
+    return ratesFallback;
   }
 };
 
@@ -73,6 +73,7 @@ export const parseSalaryFromTitleRaw = (baseCurrency, rates, rawMin, rawMax, raw
   //   console.log({ currencyCode, rateConvertCurrency });
   // }
   const isExistFork = rawMin && rawMax;
+  console.log(getNumberFromCurrency(rawMin, currency), currency, baseCurrency);
   const min = convertCurrency(
     getNumberFromCurrency(rawMin, currency),
     rates,

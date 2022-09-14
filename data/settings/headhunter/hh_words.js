@@ -1,6 +1,6 @@
 export const excludeWordTitle = [
-  'senior',
-  'сеньор',
+  // 'senior',
+  // 'сеньор',
   'руководитель',
   '"Team Lead"',
   'Тимлид',
@@ -145,9 +145,12 @@ export const excludeWordDesc = [
 
 export const includeWordDesc = [
   // 'js',
+  'typescript*',
   'javascript*',
   'node*',
-  'moleculer*',
+  'nest*',
+  // 'moleculer*',
   '"node.js*"',
+  '"nest.js*"',
   'nodejs*',
 ];

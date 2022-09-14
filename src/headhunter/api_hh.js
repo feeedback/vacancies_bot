@@ -67,7 +67,7 @@ const createFilterSearch = (userFilter = {}, userWords = {}, lastRequestTime, is
 const formatFilterSort = (
   vacanciesRaw,
   baseCurrency = 'RUB',
-  rates = { RUB: 75, USD: 1 },
+  rates = { RUB: 65, USD: 1 },
   minSalary = 0,
   maxSalary = Infinity
 ) => {
