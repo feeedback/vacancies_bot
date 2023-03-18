@@ -136,18 +136,22 @@ export const excludeWordDesc = [
   '"laravel"',
   '"1С-Битрикс"',
   '"Qlikview"',
-  // '"PHP"',
-  // '"django"',
+  '"Symfony"',
+  '"PHP"',
+  '"django"',
   // '"jQuery"',
   // '"React Native"',
   // '"React & Redux"',
 ];
 
 export const includeWordDesc = [
-  // 'js',
+  // 'js', 
+  'typescript*',
   'javascript*',
   'node*',
   'moleculer*',
+  '"nest"',
+  '"nest.js*"',
   '"node.js*"',
   'nodejs*',
 ];

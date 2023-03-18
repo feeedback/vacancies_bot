@@ -31,9 +31,10 @@ const getStringifyVacancy = ({
   const tasksR = tasks.replace(/[_$*]/g, '-');
   const skillsR = skills.replace(/[_$*]/g, '-');
   const cityR = city.replace(/[_$*]/g, '-');
-  const scheduleR = schedule.replace(/[_$*]/g, '-');
+  // const scheduleR = schedule.replace(/[_$*]/g, '-');
 
-  return `${salaryOut} | ${ago} | «${companyR}» | *«${titleR}»* | ${tasksR} ${skillsR} | _${cityR}. ${scheduleR}_ ► ${linkB}`;
+  // return `${salaryOut} | ${ago} | «${companyR}» | *«${titleR}»* | ${tasksR} ${skillsR} | _${cityR}. ${scheduleR}_ ► ${linkB}`;
+  return `${salaryOut} | ${ago} | «${companyR}» | *«${titleR}»* | ${tasksR} ${skillsR} | _${cityR}._ ► ${linkB}`;
 };
 
 const getStringifyVacancies = (vacanciesFiltered) => vacanciesFiltered.map(getStringifyVacancy);
@@ -118,16 +119,16 @@ const requestVacanciesHeadHunter = async (
   );
   const keyCache = getHashByStr(urlRaw.toString());
 
-  if (await redisCache.exists(keyCache)) {
-    const cachedVacanciesData = JSON.parse(await redisCache.get(keyCache)).map((vacancy) => ({
-      ...vacancy,
-      ago: dayjs.unix(vacancy.createdAt).fromNow(),
-    }));
-    return {
-      vacanciesData: cachedVacanciesData,
-      getStringifyVacancies,
-    };
-  }
+  // if (await redisCache.exists(keyCache)) {
+  //   const cachedVacanciesData = JSON.parse(await redisCache.get(keyCache)).map((vacancy) => ({
+  //     ...vacancy,
+  //     ago: dayjs.unix(vacancy.createdAt).fromNow(),
+  //   }));
+  //   return {
+  //     vacanciesData: cachedVacanciesData,
+  //     getStringifyVacancies,
+  //   };
+  // }
   console.log('request vacancies HeadHunter', urlRaw.toString());
 
   let page = 0;

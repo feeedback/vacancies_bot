@@ -53,13 +53,17 @@ export const parseSalaryFromTitleHH = (
 
 export const parseVacanciesFromDom = async (data, redisCache) => {
   const document = getDOMDocument(data);
-  // console.log(document.documentElement.outerHTML);
-  const vacanciesCount = Number(
-    document.querySelector(`h1.bloko-header-1`).childNodes[0].textContent
+
+  let vacanciesCount = Number(
+    document.querySelector(`h1[data-qa^=bloko-header]`).childNodes[0].textContent
   );
-  const vacanciesEl = [...document.querySelectorAll('.vacancy-serp-item')];
+  if (isNaN(vacanciesCount)) {
+    vacanciesCount = 0;
+  }
+  const vacanciesEl = [...document.querySelectorAll('.serp-item')];
 
   console.log('Получено:', vacanciesEl.length, 'Вакансий — HeadHunter');
+
   const getChildTextByDataAttr = (el, str, addStr = '', isText = true) => {
     const child = el.querySelector(`[data-qa="${str}"]${addStr ? `${` ${addStr}`}` : ''}`);
     return isText ? child?.textContent?.trim() || '' : child;
@@ -78,36 +82,36 @@ export const parseVacanciesFromDom = async (data, redisCache) => {
       /<\/?highlighttext>/gi,
       ''
     );
-    const title = getElByAttr('vacancy-serp__vacancy-title');
+    const title = getElByAttr('serp-item__title');
 
-    const id = getElByAttr('vacancy-serp__vacancy-title', '', false)
-      .href.split('?')[0]
-      .split('vacancy/')[1];
+    const id = getElByAttr('serp-item__title', '', false).href.split('?')[0].split('vacancy/')[1];
     const link = `${BASE_VACANCY_LINK}/${id}`;
 
     const salaryStr = getElByAttr('vacancy-serp__vacancy-compensation');
 
-    const scheduleRaw = getElByAttr('vacancy-serp__vacancy-work-schedule');
-    const schedule = scheduleRaw === 'Можно работать из дома' ? 'Можно удалённо.' : scheduleRaw;
+    // const scheduleRaw = getElByAttr('vacancy-serp__vacancy-work-schedule');
+    // const schedule = scheduleRaw === 'Можно работать из дома' ? 'Можно удалённо.' : scheduleRaw;
+    const schedule = '';
 
     const company = getElByAttr('vacancy-serp__vacancy-employer');
     const address = getElByAttr('vacancy-serp__vacancy-address');
     const city = address.split(',')[0];
 
-    const dateMonthDay = getElByAttr(
-      'vacancy-serp__vacancy-date',
-      '.vacancy-serp-item__publication-date_short'
-    );
-    const bumpedAt = dayjs.utc(dateMonthDay, 'DD-MM').unix();
-    const bumpedAgo = dayjs().to(dayjs.unix(bumpedAt));
+    //  const dateMonthDay =
+    //    getElByAttr('vacancy-serp__vacancy-date', '.vacancy-serp-item__publication-date_short') ||
+    //    dayjs().format('DD-MM');
     const content = [title, company, salaryStr, tasks, skills, schedule].join('\n');
+
+    // const bumpedAt = dayjs.utc(dateMonthDay, 'DD-MM').unix();
+    // const bumpedAgo = dayjs().to(dayjs.unix(bumpedAt));
     const hashContent = getHashByStr(content);
 
     const cachedCreatedAt = await redisCache.get(`HH:vacancyCreatedAt:${hashContent}`);
-    const createdAt =
-      cachedCreatedAt ?? dayjs(bumpedAt).isBefore(dayjs().subtract(1, 'day'))
-        ? bumpedAt
-        : dayjs().unix();
+    // const createdAt =
+    //   cachedCreatedAt ?? dayjs(bumpedAt).isBefore(dayjs().subtract(1, 'day'))
+    //     ? bumpedAt
+    //     : dayjs().unix();
+    const createdAt = cachedCreatedAt ?? dayjs().unix();
     const ago = dayjs.unix(+createdAt).fromNow();
 
     if (!cachedCreatedAt) {
@@ -125,9 +129,9 @@ export const parseVacanciesFromDom = async (data, redisCache) => {
       // address,
       salaryStr,
       city,
-      bumpedAt,
+      // bumpedAt,
       createdAt,
-      bumpedAgo,
+      // bumpedAgo,
       // content,
       hashContent,
       ago: ago === 'a few seconds ago' ? 'a minute ago' : ago,

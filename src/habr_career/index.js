@@ -32,6 +32,7 @@ const getVacanciesHabrCareer = async (
   }
 
   const rates = await getCurrencyRates();
+
   const { vacanciesFiltered, vacancies } = await parseFilterFormatVacancies(
     vacanciesRaw,
     'RUB',
@@ -40,8 +41,8 @@ const getVacanciesHabrCareer = async (
     vacancyExcludeWordsInDesc,
     0,
     0,
-    30000,
-    200000
+    60_000,
+    500_000
   );
   const stringVacancies = getStringifyVacancies(vacanciesFiltered);
 

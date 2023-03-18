@@ -32,5 +32,6 @@ export const filterVacanciesSearchBase = {
   no_magic: true, // ???
   // items_on_page: 100,
   items_on_page: 20,
+  enable_snippets: true,
   // only_with_salary: true,
 };

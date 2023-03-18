@@ -18,8 +18,8 @@ dotenv.config();
 const INTERVAL_POLL_SUB_MS = 1000 * 60 * 10;
 
 export const redisStore = new Redis({
-  port: 14033, // Redis port
-  host: 'redis-14033.c239.us-east-1-2.ec2.cloud.redislabs.com', // Redis host
+  port: process.env.REDIS_PORT, // Redis port
+  host: process.env.REDIS_HOST, // Redis host
   family: 4, // 4 (IPv4) or 6 (IPv6)
   password: process.env.REDIS_PASS,
   db: 0,
@@ -360,7 +360,9 @@ export const getHandlers = async (
   /** @type {Telegraf<import("telegraf").Context<import("typegram").Update>>} */ bot
 ) => {
   (async () => {
-    const cachedState = await redisStore.get('mapUserIdToState');
+    // const cachedState = await redisStore.get('mapUserIdToState');
+    // const cachedState = await redisStore.get('mapUserIdToState');
+    const cachedState = null;
 
     if (cachedState) {
       try {
