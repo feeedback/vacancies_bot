@@ -119,16 +119,16 @@ const requestVacanciesHeadHunter = async (
   );
   const keyCache = getHashByStr(urlRaw.toString());
 
-  // if (await redisCache.exists(keyCache)) {
-  //   const cachedVacanciesData = JSON.parse(await redisCache.get(keyCache)).map((vacancy) => ({
-  //     ...vacancy,
-  //     ago: dayjs.unix(vacancy.createdAt).fromNow(),
-  //   }));
-  //   return {
-  //     vacanciesData: cachedVacanciesData,
-  //     getStringifyVacancies,
-  //   };
-  // }
+  if (await redisCache.exists(keyCache)) {
+    const cachedVacanciesData = JSON.parse(await redisCache.get(keyCache)).map((vacancy) => ({
+      ...vacancy,
+      ago: dayjs.unix(vacancy.createdAt).fromNow(),
+    }));
+    return {
+      vacanciesData: cachedVacanciesData,
+      getStringifyVacancies,
+    };
+  }
   console.log('request vacancies HeadHunter', urlRaw.toString());
 
   let page = 0;

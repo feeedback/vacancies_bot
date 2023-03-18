@@ -15,7 +15,8 @@ import { nowMsDate, chunkTextBlocksBySizeByte } from '../utils/utils.js';
 dotenv.config();
 
 // const INTERVAL_POLL_SUB_MS = 1000 * 60 * 10;
-const INTERVAL_POLL_SUB_MS = 1000 * 60 * 10;
+const INTERVAL_POLL_SUB_MS = (process.env.INTERVAL_POLL_SUB_MINUTE || 10) * 60 * 1000;
+console.log('INTERVAL_POLL_SUB_MS', INTERVAL_POLL_SUB_MS / 1000 / 60);
 
 export const redisStore = new Redis({
   port: process.env.REDIS_PORT, // Redis port
@@ -360,9 +361,7 @@ export const getHandlers = async (
   /** @type {Telegraf<import("telegraf").Context<import("typegram").Update>>} */ bot
 ) => {
   (async () => {
-    // const cachedState = await redisStore.get('mapUserIdToState');
-    // const cachedState = await redisStore.get('mapUserIdToState');
-    const cachedState = null;
+    const cachedState = await redisStore.get('mapUserIdToState');
 
     if (cachedState) {
       try {
@@ -405,9 +404,10 @@ export const getHandlers = async (
                 lastTimeDiff = (dayjs().unix() - timeLastPollSub) * 1000;
               }
             }
-
+            if (lastTimeDiff > INTERVAL_POLL_SUB_MS) {
+              await getVacancySub(bot, +userId, +userId, false, lastTimeDiff);
+            }
             // setTimeout(async () => {
-            await getVacancySub(bot, +userId, +userId, false, lastTimeDiff);
 
             const newIntervalId = setInterval(async () => {
               await getVacancySub(bot, +userId, +userId, false, INTERVAL_POLL_SUB_MS);
