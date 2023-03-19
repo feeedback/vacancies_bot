@@ -51,11 +51,11 @@ const bot = new Telegraf(process.env.TELEGRAM_BOT_API, { handlerTimeout: 5 * 60 
     console.log('SIGTERM');
   });
   // process.on('exit', () => {
-  //   // unsubAll();
-  //   // await redis.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
+  //   unsubAll();
+  //   bot.stop('SIGTERM');
+  //   redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
+  //   redisStore.quit();
 
-  //   // bot.stop('SIGTERM');
-  //   // redis.quit();
   //   console.log('exit');
   //   process.exit(0);
   // });

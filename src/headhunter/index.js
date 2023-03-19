@@ -15,7 +15,7 @@ const getVacanciesHeadHunter = async (
     filter,
     filtersWords,
     lastRequestTime,
-    60_000,
+    90_000,
     500_000,
     cache
   );
@@ -26,18 +26,30 @@ const getVacanciesHeadHunter = async (
       const baseVacancy = vacancyArr[0];
       // объединяем одинаковые вакансии в разных городах, выводим как одну вакансию со списком городов через ;
       if (vacancyArr.length > 1) {
-        return { ...baseVacancy, city: `${vacancyArr.map(({ city }) => city).join('; ')}` };
+        return {
+          ...baseVacancy,
+          city: `${vacancyArr.map(({ city }) => city).join('; ')}`,
+          // linkByCity: _.groupBy(
+          //   vacancyArr.map((x) => _.pick(x, ['city', 'link'])),
+          //   'city'
+          // ),
+          linkByCity: vacancyArr.map((x) => [x.city, x.link]),
+        };
       }
 
       return baseVacancy;
     })
-    .sort(({ salary: { avgUSD: A } }, { salary: { avgUSD: B } }) => B - A);
-
+    .sort(
+      (
+        { salary: { avgUSD: usdA }, publicationTimeUnix: atA },
+        { salary: { avgUSD: usdB }, publicationTimeUnix: atB }
+      ) => atB - atA || usdB - usdA
+    );
   const hashes = vacanciesFiltered.map(({ hashContent }) => hashContent);
 
   const stringVacancies = getStringifyVacancies(vacanciesFiltered);
 
-  console.log('getVacanciesHabrCareer', Date.now() - logT, 'ms');
+  console.log('getVacanciesHeadHunter', Date.now() - logT, 'ms');
 
   return {
     stringVacancies,

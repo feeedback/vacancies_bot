@@ -26,6 +26,8 @@ export const getVacancyByFilterFromRssHabrCareer = async (
   fromDayAgo = 14,
   redisCache
 ) => {
+  console.log('getVacancyByFilterFromRssHabrCareer', { fromDayAgo });
+
   let filter = filterParam;
   if (typeof filter === 'string') {
     filter = qs.parse(new URL(filter).search.slice(1));
@@ -98,9 +100,9 @@ const parseSalaryFromTitleHabr = (stringTitleVacancy, baseCurrency, rates) => {
     return null;
   }
   const [, , rawMin, , rawMax, rawCurrencySymbol] = salary;
-   if (!rawMin && !rawMax) {
-     return null;
-   }
+  if (!rawMin && !rawMax) {
+    return null;
+  }
   return parseSalaryFromTitleRaw(baseCurrency, rates, rawMin, rawMax, rawCurrencySymbol);
 };
 
@@ -154,18 +156,19 @@ export const parseFilterFormatVacancies = async (
     });
 
   const vacanciesFilteredRaw = vacancies.filter(({ tagsLowerCase, titleShort }) => {
+    const wordsTitles = _.words(titleShort.toLowerCase());
+
     const countBadTag = vacancyExcludeTagsLC.reduce(
       (sum, badTag) => sum + tagsLowerCase.includes(badTag),
       0
     );
     const countBadWord = vacancyExcludeWordsInDescLC.reduce(
-      (sum, badWord) => sum + _.words(titleShort.toLowerCase()).includes(badWord),
+      (sum, badWord) => sum + wordsTitles.includes(badWord),
       0
     );
     // console.log('countBadTag <= maxCountIncludesBadTag', { countBadTag, maxCountIncludesBadTag });
     return countBadTag <= maxCountIncludesBadTag && countBadWord <= maxCountIncludesBadWord;
   });
-
 
   const vacanciesFiltered = vacanciesFilteredRaw
     .filter(

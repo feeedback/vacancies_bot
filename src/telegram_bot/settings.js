@@ -44,6 +44,7 @@ export const initStateUsers = {
   413777946: {
     rss: MY_SETTINGS.rss,
     rss2: MY_SETTINGS.rss2,
+    rss3: MY_SETTINGS.rss3,
     rssMessageID: null,
     // pollOptionsExTags: null, // []
     // selectedPollOptionsIndex: null, // []

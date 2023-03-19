@@ -2,11 +2,11 @@ import dayjs from 'dayjs';
 import axios from 'axios';
 import qs from 'qs';
 // import LRU from 'lru-cache';
+import _ from 'lodash';
 import { parseVacanciesFromDom, parseSalaryFromTitleHH } from './dom-parser.js';
 import { requestConfig, syntaxSearch as syntax, filterVacanciesSearchBase } from './config.js';
 import { delayMs, getHashByStr } from '../utils/utils.js';
 import { getCurrencyRates } from '../utils/api_currency.js';
-
 // export const cache = new LRU({
 //   max: 1000,
 //   maxAge: 1000 * 60 * 60 * 24 * 10, // 10 days
@@ -19,11 +19,19 @@ const getStringifyVacancy = ({
   link = '',
   salary,
   company = '',
-  schedule = '',
+  // schedule = '',
+  publicationTimeUnix = '',
+  lastChangeTimeUnix = '',
+  responsesCount = 0,
+  online_users_count: online = 0,
   city = '',
+  linkByCity = null,
   ago = '',
 }) => {
-  // const agoStr = edit !== created ? `${edit} (${created})}` : created;
+  const lastEdit = lastChangeTimeUnix ? `${dayjs.unix(+lastChangeTimeUnix).fromNow()}` : ago;
+  const agoStr = publicationTimeUnix
+    ? `${dayjs.unix(+publicationTimeUnix).fromNow()} (✍️${lastEdit})`
+    : `✍️${lastEdit})`;
   const salaryOut = salary.isSalaryDefine ? `${salary.fork} (~${salary.avgUSD} $)` : '_Не указана_';
   const linkB = link.split('hh').join('*hh*').split('://')[1];
   const companyR = company.replace(/[_$*]/g, '-');
@@ -31,10 +39,16 @@ const getStringifyVacancy = ({
   const tasksR = tasks.replace(/[_$*]/g, '-');
   const skillsR = skills.replace(/[_$*]/g, '-');
   const cityR = city.replace(/[_$*]/g, '-');
+
+  const cityWithLinks = !linkByCity
+    ? `_${cityR}_`
+    : linkByCity.map(([c, l]) => `[${c.replace(/[_$*]/g, '-')}](${l})`).join('; ');
+  const counts = online ? `✉️${responsesCount} 👀${online}` : `✉️${responsesCount}`;
   // const scheduleR = schedule.replace(/[_$*]/g, '-');
 
   // return `${salaryOut} | ${ago} | «${companyR}» | *«${titleR}»* | ${tasksR} ${skillsR} | _${cityR}. ${scheduleR}_ ► ${linkB}`;
-  return `${salaryOut} | ${ago} | «${companyR}» | *«${titleR}»* | ${tasksR} ${skillsR} | _${cityR}._ ► ${linkB}`;
+  // return `${salaryOut} | ${agoStr} |${counts}| «${companyR}» | *«${titleR}»* | ${tasksR} ${skillsR} | _${cityR}._ ► ${linkB}`;
+  return `${salaryOut} | ${agoStr} |${counts}| «${companyR}» | *«${titleR}»* | ${tasksR} ${skillsR} | ${cityWithLinks}. ► ${linkB}`;
 };
 
 const getStringifyVacancies = (vacanciesFiltered) => vacanciesFiltered.map(getStringifyVacancy);
@@ -87,7 +101,12 @@ const formatFilterSort = (
       ({ salary: { avg, isSalaryDefine } }) =>
         !isSalaryDefine || (avg >= minSalary && avg <= maxSalary)
     )
-    .sort(({ salary: { avgUSD: A } }, { salary: { avgUSD: B } }) => B - A);
+    .sort(
+      (
+        { salary: { avgUSD: usdA }, publicationTimeUnix: atA },
+        { salary: { avgUSD: usdB }, publicationTimeUnix: atB }
+      ) => atB - atA || usdB - usdA
+    );
 
   return vacancies;
 };
@@ -117,6 +136,9 @@ const requestVacanciesHeadHunter = async (
   const urlRaw = new URL(
     `${requestConfig.BASE_URL}?${qs.stringify(filter, { arrayFormat: 'repeat' })}`
   );
+  const urlRawJSON = new URL(
+    `${requestConfig.BASE_URL_JSON}?${qs.stringify(filter, { arrayFormat: 'repeat' })}`
+  );
   const keyCache = getHashByStr(urlRaw.toString());
 
   if (await redisCache.exists(keyCache)) {
@@ -130,6 +152,7 @@ const requestVacanciesHeadHunter = async (
     };
   }
   console.log('request vacancies HeadHunter', urlRaw.toString());
+  console.log('request vacancies HeadHunter JSON', urlRawJSON.toString());
 
   let page = 0;
   let pageMax = Infinity;
@@ -138,6 +161,8 @@ const requestVacanciesHeadHunter = async (
   while (page < pageMax) {
     urlRaw.searchParams.set('page', page);
     const url = urlRaw.toString();
+    urlRawJSON.searchParams.set('page', page);
+    const urlJSON = urlRawJSON.toString();
 
     let vacanciesData = null;
     console.log('--- --- ---> page', page + 1);
@@ -148,10 +173,44 @@ const requestVacanciesHeadHunter = async (
         res.data,
         redisCache
       );
+      const resJSON = await axios.get(urlJSON, { headers: requestConfig.headersJson });
+      // const res2 = await axios.get(url2, {});
+
+      const mapJsonDataByVacancyId = _.groupBy(
+        resJSON.data.vacancySearchResult.vacancies,
+        'vacancyId'
+      );
+      // console.log('mapJsonDataByVacancyId', mapJsonDataByVacancyId);
+
+      const vacanciesDataRawWithJSON = vacanciesDataRaw.map((v) => {
+        const id = v.id.split('/').at('-1');
+        if (!id) {
+          console.log(mapJsonDataByVacancyId[id]);
+          console.log({ id });
+        }
+        const rawJson = mapJsonDataByVacancyId[id][0];
+
+        return Object.assign(v, {
+          responsesCount: rawJson?.responsesCount || 0, // todo: понять чем различается с totalResponsesCount
+          online_users_count: rawJson?.online_users_count || 0,
+          creationTime: rawJson?.creationTime,
+          publicationTime: rawJson?.publicationTime?.$,
+          publicationTimeUnix: rawJson?.publicationTime?.['@timestamp'],
+          lastChangeTime: rawJson?.lastChangeTime?.$,
+          lastChangeTimeUnix: rawJson?.lastChangeTime?.['@timestamp'],
+        });
+      });
+      // console.log('vacanciesDataRaw2 :>> ', vacanciesDataRawWithJSON);
 
       pageMax = Math.ceil(vacanciesCount / 20);
 
-      vacanciesData = formatFilterSort(vacanciesDataRaw, 'RUB', rates, minSalary, maxSalary);
+      vacanciesData = formatFilterSort(
+        vacanciesDataRawWithJSON,
+        'RUB',
+        rates,
+        minSalary,
+        maxSalary
+      );
       vacancies.push(...vacanciesData);
 
       if (vacanciesData.length === 0) {

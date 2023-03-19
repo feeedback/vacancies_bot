@@ -41,7 +41,7 @@ const getVacanciesHabrCareer = async (
     vacancyExcludeWordsInDesc,
     0,
     0,
-    60_000,
+    90_000,
     500_000
   );
   const stringVacancies = getStringifyVacancies(vacanciesFiltered);

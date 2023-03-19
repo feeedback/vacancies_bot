@@ -62,6 +62,8 @@ export const excludeWordTitle = [
   'Assembler',
   'Linux',
   'Tilda',
+  'ELMA',
+  'Delphi',
   'PHP',
   'РHP',
   'РНР',
@@ -145,7 +147,7 @@ export const excludeWordDesc = [
 ];
 
 export const includeWordDesc = [
-  // 'js', 
+  // 'js',
   'typescript*',
   'javascript*',
   'node*',

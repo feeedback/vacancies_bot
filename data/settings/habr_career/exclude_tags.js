@@ -10,7 +10,7 @@ export default [
   '.netcore',
   'asp.net',
   'asp.netmvc',
-  'C',
+  // 'C',
   'laravel',
   'springboot',
   '1сбитрикс',

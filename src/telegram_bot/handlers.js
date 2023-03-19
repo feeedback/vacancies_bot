@@ -201,6 +201,7 @@ const getVacancy = async (ctx) => {
   }
   const rss = userState?.rss;
   const rss2 = userState?.rss2;
+  const rss3 = userState?.rss3;
 
   if (!rss) {
     ctx.replyWithMarkdown('RSS not found! Please add that with */rss* [link]');
@@ -215,22 +216,29 @@ const getVacancy = async (ctx) => {
     );
   }
 
-  const dayRaw = ctx.update.message.text.slice(5).trim();
+  const [dayRaw = 2, sourceRaw = 'ALL'] = ctx.update.message.text.slice(5).trim().split(' ');
+
+  const source = ['HH', 'HC', 'ALL'].includes(sourceRaw) ? sourceRaw : 'ALL';
+
   let day = Number(dayRaw);
-  if (!dayRaw) {
+  // eslint-disable-next-line no-restricted-globals
+  if (isNaN(dayRaw)) {
     day = 2;
   }
+  console.log('\n', nowMsDate(), getVacancy, { day, source });
+
   // await ctx.reply('Идет обработка вакансий, пожалуйста, подождите несколько секунд...');
   ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
 
   try {
     const { stringVacancies, vacanciesFiltered } = await getVacanciesHabrCareer(
-      rss2 ? [rss, rss2] : rss,
+      [rss, rss2, rss3].filter(Boolean),
       day,
       userState.excludeTags,
       userState.excludeWords,
       redisStore
     );
+    const allVacancies = [...stringVacancies];
 
     console.log('вакансии получены Habr.career', vacanciesFiltered.length);
 
@@ -239,13 +247,21 @@ const getVacancy = async (ctx) => {
       .subtract(day - 1, 'day')
       .unix();
 
-    const {
-      stringVacancies: stringVacanciesHH,
-      vacanciesFiltered: vacanciesFilteredHH,
-    } = await getVacanciesHeadHunter(dayUnix, userState.HH.filter, userState.HH.words, redisStore);
+    if (source !== 'HC') {
+      const {
+        stringVacancies: stringVacanciesHH,
+        vacanciesFiltered: vacanciesFilteredHH,
+      } = await getVacanciesHeadHunter(
+        dayUnix,
+        userState.HH.filter,
+        userState.HH.words,
+        redisStore
+      );
 
-    console.log('вакансии получены HeadHunter', vacanciesFilteredHH.length);
-    const allVacancies = [...stringVacancies, ...stringVacanciesHH];
+      console.log('вакансии получены HeadHunter', vacanciesFilteredHH.length);
+
+      allVacancies.push(...stringVacanciesHH);
+    }
 
     for (const messageChunk of chunkTextBlocksBySizeByte(allVacancies, 4096)) {
       ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
@@ -273,6 +289,7 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
   const userState = mapUserIdToState[userId];
   const rss = userState?.rss;
   const rss2 = userState?.rss2;
+  const rss3 = userState?.rss3;
 
   if (!rss) {
     sendMD(bot, chatId, 'RSS not found! Please add that with */rss* [link]');
@@ -288,13 +305,12 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
       '_Ваш список исключаемых тегов пуст. Вы можете добавить их командой */extagsset*_'
     );
   }
-  await redisStore.set(`sub|${userId}`, dayjs().unix());
 
   const existHashes = userState.hashes;
 
   try {
     const { hashes, vacanciesFiltered, getStringifyVacancies } = await getVacanciesHabrCareer(
-      rss2 ? [rss, rss2] : rss,
+      [rss, rss2, rss3].filter(Boolean),
       isFirstSub ? 7 : 3,
       userState.excludeTags,
       userState.excludeWords,
@@ -319,6 +335,8 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
 
     if (!newHashes.length) {
       console.log('getVacancySub нет новых вакансий');
+
+      await redisStore.set(`sub|${userId}`, dayjs().unix());
       return;
     }
 
@@ -330,6 +348,7 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
       console.log('getVacancySub isFirstSub -> return');
       bot.telegram.webhookReply = true;
 
+      await redisStore.set(`sub|${userId}`, dayjs().unix());
       return;
     }
     bot.telegram.sendChatAction(chatId, 'typing');
@@ -355,6 +374,8 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
   } catch (error) {
     console.log(error);
   }
+
+  await redisStore.set(`sub|${userId}`, dayjs().unix());
 };
 
 export const getHandlers = async (
@@ -363,7 +384,8 @@ export const getHandlers = async (
   (async () => {
     const cachedState = await redisStore.get('mapUserIdToState');
 
-    if (cachedState) {
+    if (cachedState === 'ddddddddddddddddddddddddd') {
+      // if (cachedState) {
       try {
         const stateFromCache = JSON.parse(cachedState);
 
