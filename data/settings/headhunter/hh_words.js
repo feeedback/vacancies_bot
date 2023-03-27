@@ -128,7 +128,8 @@ export const excludeWordTitle = [
   'Scientist',
   'CTO',
   // 'Full-stack',
-  // 'Fullstack',
+  'Fullstack',
+  'Full',
 ];
 
 export const excludeWordDesc = [

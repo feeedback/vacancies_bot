@@ -105,7 +105,9 @@ const formatFilterSort = (
       (
         { salary: { avgUSD: usdA }, publicationTimeUnix: atA },
         { salary: { avgUSD: usdB }, publicationTimeUnix: atB }
-      ) => atB - atA || usdB - usdA
+      ) =>
+        // atB - atA || usdB - usdA
+        usdB - usdA || atB - atA
     );
 
   return vacancies;
@@ -222,7 +224,7 @@ const requestVacanciesHeadHunter = async (
     }
 
     page += 1;
-    await delayMs(500);
+    await delayMs(5000);
   }
 
   redisCache.set(keyCache, JSON.stringify(vacancies), 'EX', isStartDay ? 60 * 60 * 2 : 60 * 5); // 2 hour // 5 min

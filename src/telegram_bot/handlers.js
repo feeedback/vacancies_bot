@@ -56,8 +56,18 @@ const startingUserState = (userId) => {
   userState.isStarted = true;
 };
 
-const sendMD = (bot, chatId, msg) =>
-  bot.telegram.sendMessage(chatId, msg.replace('`', ''), { parse_mode: 'Markdown' });
+// eslint-disable-next-line consistent-return
+const sendMD = async (bot, chatId, msg) => {
+  try {
+    const res = await bot.telegram.sendMessage(chatId, msg.replace('`', ''), {
+      parse_mode: 'Markdown',
+    });
+    return res;
+  } catch (error) {
+    console.log('sendMD error');
+    console.error(error);
+  }
+};
 
 const setRss = async (ctx, rss) => {
   let isValidURL = rss.startsWith('https://career.habr.com/vacancies/rss');
@@ -89,7 +99,7 @@ const setExcludeTags = async (ctx, isSaveOld = false) => {
     startingUserState(userId);
   }
   if (!mapUserIdToState[userId].rss) {
-    ctx.replyWithMarkdown('Для начала установите RSS ссылку, командой */rss*');
+    await ctx.replyWithMarkdown('Для начала установите RSS ссылку, командой */rss*');
     return;
   }
 
@@ -140,7 +150,7 @@ const setExcludeTags = async (ctx, isSaveOld = false) => {
 const setExcludeWords = async (ctx, isSaveOld = false) => {
   const userId = ctx.update.message.from.id;
   if (!mapUserIdToState[userId].rss) {
-    ctx.replyWithMarkdown('Для начала установите RSS ссылку, командой */rss*');
+    await ctx.replyWithMarkdown('Для начала установите RSS ссылку, командой */rss*');
     return;
   }
 
@@ -204,14 +214,14 @@ const getVacancy = async (ctx) => {
   const rss3 = userState?.rss3;
 
   if (!rss) {
-    ctx.replyWithMarkdown('RSS not found! Please add that with */rss* [link]');
+    await ctx.replyWithMarkdown('RSS not found! Please add that with */rss* [link]');
     console.log('user id', userId, 'not found rss');
     return;
   }
   ctx.telegram.webhookReply = false;
 
   if (!userState.excludeTags.length === 0) {
-    ctx.replyWithMarkdown(
+    await ctx.replyWithMarkdown(
       '_Ваш список исключаемых тегов пуст. Вы можете добавить их командой */extagsset*_'
     );
   }
@@ -292,14 +302,14 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
   const rss3 = userState?.rss3;
 
   if (!rss) {
-    sendMD(bot, chatId, 'RSS not found! Please add that with */rss* [link]');
+    await sendMD(bot, chatId, 'RSS not found! Please add that with */rss* [link]');
     console.log('user id', userId, 'not found rss');
     return;
   }
   bot.telegram.webhookReply = false;
 
   if (!userState.excludeTags.length === 0) {
-    sendMD(
+    await sendMD(
       bot,
       chatId,
       '_Ваш список исключаемых тегов пуст. Вы можете добавить их командой */extagsset*_'
@@ -351,7 +361,7 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
       await redisStore.set(`sub|${userId}`, dayjs().unix());
       return;
     }
-    bot.telegram.sendChatAction(chatId, 'typing');
+    await bot.telegram.sendChatAction(chatId, 'typing');
 
     const allVacancies = [...vacanciesFiltered, ...vacanciesFilteredHH];
     const newVacancy = newHashes.map((hash) =>
@@ -373,6 +383,12 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
     bot.telegram.webhookReply = true;
   } catch (error) {
     console.log(error);
+
+    if (error.response && error.response.statusCode === 403) {
+      console.log(error.response);
+      delete mapUserIdToState[userId];
+      redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
+    }
   }
 
   await redisStore.set(`sub|${userId}`, dayjs().unix());
@@ -384,8 +400,8 @@ export const getHandlers = async (
   (async () => {
     const cachedState = await redisStore.get('mapUserIdToState');
 
-    if (cachedState === 'ddddddddddddddddddddddddd') {
-      // if (cachedState) {
+    // if (cachedState === 'ddddddddddddddddddddddddd') {
+    if (cachedState) {
       try {
         const stateFromCache = JSON.parse(cachedState);
 
@@ -461,22 +477,56 @@ export const getHandlers = async (
         console.log('');
       },
     ],
-    start: (ctx) => {
+    start: async (ctx) => {
       const userId = ctx.update.message.from.id;
-      startingUserState(userId);
+      try {
+        startingUserState(userId);
+        await ctx.replyWithMarkdown(botStartMessage.join('\n'));
+      } catch (error) {
+        console.log('start', error);
+        console.log(error.stack);
 
-      ctx.replyWithMarkdown(botStartMessage.join('\n'));
+        if (error.response && error.response.statusCode === 403) {
+          console.log(error.response);
+          delete mapUserIdToState[userId];
+          redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
+        }
+      }
     },
     settings: async (ctx) => {
-      await ctx.setMyCommands(commandDescription);
+      try {
+        await ctx.setMyCommands(commandDescription);
+      } catch (error) {
+        console.log('settings', error);
+        console.log(error.stack);
+
+        const userId = ctx.update.message.from.id;
+        if (error.response && error.response.statusCode === 403) {
+          console.log(error.response);
+          delete mapUserIdToState[userId];
+          redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
+        }
+      }
     },
     help: async (ctx) => {
-      const commands = await ctx.getMyCommands();
-      const info = commands.reduce(
-        (acc, val) => `${acc}/${val.command} - ${val.description}\n`,
-        ''
-      );
-      return ctx.reply(info);
+      try {
+        const commands = await ctx.getMyCommands();
+        const info = commands.reduce(
+          (acc, val) => `${acc}/${val.command} - ${val.description}\n`,
+          ''
+        );
+        return await ctx.reply(info);
+      } catch (error) {
+        console.log('help', error);
+        console.log(error.stack);
+
+        const userId = ctx.update.message.from.id;
+        if (error.response && error.response.statusCode === 403) {
+          console.log(error.response);
+          delete mapUserIdToState[userId];
+          redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
+        }
+      }
     },
     command: {
       rss: async (ctx) => {
@@ -508,7 +558,7 @@ export const getHandlers = async (
 
         ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
         if (mapUserIdToState[userId].excludeTags.length === 0) {
-          ctx.replyWithMarkdown(
+          await ctx.replyWithMarkdown(
             'Ваш список исключаемых тегов пуст. Вы можете добавить их командой */extagsset*'
           );
           return;
@@ -518,7 +568,7 @@ export const getHandlers = async (
           .map((tag) => `  \`#${tag.replace(markdownRegexp, '$1')}\``)
           .join('\n');
 
-        ctx.replyWithMarkdown(
+        await ctx.replyWithMarkdown(
           `*Ваши исключаемые теги:*\n${tagsStr}\n\nВы можете добавить в список ещё */extagsadd* (или задать заново */extagsset*)`,
           { disable_web_page_preview: true }
         );
@@ -536,7 +586,7 @@ export const getHandlers = async (
         }
         ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
         if (mapUserIdToState[userId].excludeWords.length === 0) {
-          ctx.replyWithMarkdown(
+          await ctx.replyWithMarkdown(
             'Ваш список исключаемых слов пуст. Вы можете добавить их командой */exwordsset*'
           );
           return;
@@ -546,7 +596,7 @@ export const getHandlers = async (
           .map((word) => `  \`${word.replace(markdownRegexp, '$1')}\``)
           .join('\n');
 
-        ctx.replyWithMarkdown(
+        await ctx.replyWithMarkdown(
           `*Ваши исключаемые слова:*\n${wordsStr}\n\nВы можете добавить в список ещё */exwordsadd* (или задать заново */exwordsset*)`,
           { disable_web_page_preview: true }
         );
@@ -567,18 +617,18 @@ export const getHandlers = async (
         ctx.telegram.sendChatAction(chatId, 'typing');
 
         if (!mapUserIdToState[userId].rss) {
-          ctx.replyWithMarkdown('RSS not found! Please add that with */rss* [link]');
+          await ctx.replyWithMarkdown('RSS not found! Please add that with */rss* [link]');
           console.log('user id', userId, 'not found rss');
           return;
         }
 
         if (mapUserIdToState[userId].isSub) {
-          ctx.replyWithMarkdown('Вы *уже подписаны*!\nОтписаться можно командой */unsub*');
+          await ctx.replyWithMarkdown('Вы *уже подписаны*!\nОтписаться можно командой */unsub*');
           console.log('user id', userId, 'sub fail - yet sub');
           return;
         }
 
-        ctx.replyWithMarkdown(
+        await ctx.replyWithMarkdown(
           'Вы успешно *подписаны* на уведомления о новых вакансий!\nОтписаться можно командой */unsub*'
         );
         console.log('user id', userId, 'sub success');
@@ -598,7 +648,7 @@ export const getHandlers = async (
           startingUserState(userId);
         }
         if (!mapUserIdToState[userId].isSub) {
-          ctx.replyWithMarkdown('Вы не подписаны!\nПодписаться можно командой */sub*');
+          await ctx.replyWithMarkdown('Вы не подписаны!\nПодписаться можно командой */sub*');
           console.log('user id', userId, 'not found sub id');
           return;
         }
@@ -608,7 +658,7 @@ export const getHandlers = async (
         }
         mapUserIdToState[userId].isSub = false;
 
-        ctx.replyWithMarkdown(
+        await ctx.replyWithMarkdown(
           'Вы успешно *отписаны* от уведомления о новых вакансий!\nПодписаться снова можно командой */sub*'
         );
         console.log('user id', userId, 'unsub success');

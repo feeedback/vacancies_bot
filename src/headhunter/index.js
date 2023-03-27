@@ -15,7 +15,7 @@ const getVacanciesHeadHunter = async (
     filter,
     filtersWords,
     lastRequestTime,
-    90_000,
+    110_000,
     500_000,
     cache
   );
@@ -43,8 +43,11 @@ const getVacanciesHeadHunter = async (
       (
         { salary: { avgUSD: usdA }, publicationTimeUnix: atA },
         { salary: { avgUSD: usdB }, publicationTimeUnix: atB }
-      ) => atB - atA || usdB - usdA
+      ) =>
+        // atB - atA || usdB - usdA
+        usdB - usdA || atB - atA
     );
+  // .filter(({ salary: { avgUSD } }) => avgUSD > 0);
   const hashes = vacanciesFiltered.map(({ hashContent }) => hashContent);
 
   const stringVacancies = getStringifyVacancies(vacanciesFiltered);

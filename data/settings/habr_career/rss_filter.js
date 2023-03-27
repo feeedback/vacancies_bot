@@ -4,7 +4,7 @@ import qs from 'qs';
 const filterVacanciesSearch = {
   currency: 'RUR',
   s: [2, 3, 82, 4, 5, 72, 6, 77, 8, 73, 86, 106], // вместо  divisions: ['apps', 'software', 'backend', 'frontend'],
-  // salary: '40000',
+  // salary: '120000',
   sort: 'date', // 'salary_asc',
   type: 'all',
   // with_salary: 'true',
