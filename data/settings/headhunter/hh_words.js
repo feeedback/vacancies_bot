@@ -1,6 +1,6 @@
 export const excludeWordTitle = [
-  'senior',
-  'сеньор',
+  // 'senior',
+  // 'сеньор',
   'руководитель',
   '"Team Lead"',
   'Тимлид',
@@ -27,7 +27,7 @@ export const excludeWordTitle = [
   'Продавец',
   'аналитик',
   'sales',
-  'Golang',
+  // 'Golang',
   '"C++"',
   '"C#"',
   'консультант',

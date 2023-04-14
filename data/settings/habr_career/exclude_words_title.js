@@ -1,5 +1,5 @@
 export default [
-  'senior',
+  // 'senior',
   'lead',
   'PHP',
   'jquery',
