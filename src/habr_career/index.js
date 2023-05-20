@@ -42,7 +42,7 @@ const getVacanciesHabrCareer = async (
     0,
     0,
     110_000,
-    500_000
+    700_000
   );
   const vacanciesFiltered = vacanciesFilteredRaw;
   // .filter(({ salary: { avgUSD } }) => avgUSD > 0);

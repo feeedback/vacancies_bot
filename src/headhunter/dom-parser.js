@@ -3,7 +3,7 @@ import dayjs from 'dayjs';
 import dayjsCustomParseFormat from 'dayjs/plugin/customParseFormat.js';
 import dayjsRelativeTime from 'dayjs/plugin/relativeTime.js';
 import dayjsUtc from 'dayjs/plugin/utc.js';
-
+import { URL } from 'url';
 // import LRU from 'lru-cache';
 import { getHashByStr } from '../utils/utils.js';
 import { parseSalaryFromTitleRaw } from '../utils/api_currency.js';
@@ -57,6 +57,7 @@ export const parseVacanciesFromDom = async (data, redisCache) => {
   let vacanciesCount = Number(
     document.querySelector(`h1[data-qa^=bloko-header]`).childNodes[0].textContent
   );
+  // eslint-disable-next-line no-restricted-globals
   if (isNaN(vacanciesCount)) {
     vacanciesCount = 0;
   }
@@ -84,7 +85,14 @@ export const parseVacanciesFromDom = async (data, redisCache) => {
     );
     const title = getElByAttr('serp-item__title');
 
-    const id = getElByAttr('serp-item__title', '', false).href.split('?')[0].split('vacancy/')[1];
+    const idFromLink = getElByAttr('serp-item__title', '', false)
+      .href.split('?')?.[0]
+      ?.split('vacancy/')?.[1];
+    const idFromButton = new URL(
+      `https://hh.ru${getElByAttr('vacancy-serp__vacancy_response', '', false)?.href}`
+    )?.searchParams?.get('vacancyId');
+
+    const id = idFromLink || idFromButton;
     const link = `${BASE_VACANCY_LINK}/${id}`;
 
     const salaryStr = getElByAttr('vacancy-serp__vacancy-compensation');
