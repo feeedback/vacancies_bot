@@ -133,7 +133,8 @@ export const excludeWordTitle = [
 ];
 
 export const excludeWordDesc = [
-  // '"C#"',
+  '"C#"',
+  '".NET"',
   // '"1C"',
   '"ASP.NET"',
   '"laravel"',
