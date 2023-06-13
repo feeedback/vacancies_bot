@@ -5,10 +5,11 @@ import _ from 'lodash';
 import dayjs from 'dayjs';
 import dayjsRelativeTime from 'dayjs/plugin/relativeTime.js';
 // import LRU from 'lru-cache';
-
+import dotenv from 'dotenv';
 import { delayMs, getHashByStr } from '../utils/utils.js';
 import { parseSalaryFromTitleRaw } from '../utils/api_currency.js';
 
+dotenv.config();
 // export const cache = new LRU({
 //   max: 2000,
 //   maxAge: 1000 * 60 * 60 * 24, // 24 hours
@@ -61,7 +62,7 @@ export const getVacancyByFilterFromRssHabrCareer = async (
         page <= 6 ? 60 * Math.round(4 + page ** 3.5) : 60 * 60 * 24
       ); // 5, 15, 50, 132, 283 минут
 
-      await delayMs(1000);
+      await delayMs(process.env.DELAY_INTERVAL_HABR_CAREER_REQUEST || 2_000);
     }
 
     vacancyCount = feed.items.length;

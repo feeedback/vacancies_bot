@@ -3,6 +3,7 @@ import axios from 'axios';
 import qs from 'qs';
 // import LRU from 'lru-cache';
 import _ from 'lodash';
+import dotenv from 'dotenv';
 import { parseVacanciesFromDom, parseSalaryFromTitleHH } from './dom-parser.js';
 import { requestConfig, syntaxSearch as syntax, filterVacanciesSearchBase } from './config.js';
 import { delayMs, getHashByStr } from '../utils/utils.js';
@@ -11,6 +12,7 @@ import { getCurrencyRates } from '../utils/api_currency.js';
 //   max: 1000,
 //   maxAge: 1000 * 60 * 60 * 24 * 10, // 10 days
 // });
+dotenv.config();
 
 const getStringifyVacancy = ({
   title = '',
@@ -224,7 +226,8 @@ const requestVacanciesHeadHunter = async (
     }
 
     page += 1;
-    await delayMs(5000);
+
+    await delayMs(process.env.DELAY_INTERVAL_HH_REQUEST || 10_000);
   }
 
   redisCache.set(keyCache, JSON.stringify(vacancies), 'EX', isStartDay ? 60 * 60 * 2 : 60 * 5); // 2 hour // 5 min
