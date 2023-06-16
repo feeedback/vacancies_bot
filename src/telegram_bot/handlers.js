@@ -10,7 +10,7 @@ import Redis from 'ioredis';
 import getVacanciesHabrCareer from '../habr_career/index.js';
 import getVacanciesHeadHunter from '../headhunter/index.js';
 import { botStartMessage, commandDescription, initStateUsers } from './settings.js';
-import { nowMsDate, chunkTextBlocksBySizeByte } from '../utils/utils.js';
+import { nowMsDate, chunkTextBlocksBySizeByte, delayMs } from '../utils/utils.js';
 
 dotenv.config();
 
@@ -273,7 +273,9 @@ const getVacancy = async (ctx) => {
       allVacancies.push(...stringVacanciesHH);
     }
 
-    for (const messageChunk of chunkTextBlocksBySizeByte(allVacancies, 4096)) {
+    const chunks = chunkTextBlocksBySizeByte(allVacancies, 4096);
+
+    for (const messageChunk of chunks) {
       ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
 
       await ctx.reply(messageChunk.join('\n\n').replace('`', ''), {
@@ -282,6 +284,10 @@ const getVacancy = async (ctx) => {
         disable_notification: true,
         parse_mode: 'Markdown',
       });
+
+      if (chunks.length >= 10) {
+        await delayMs(6_100);
+      }
     }
 
     ctx.telegram.webhookReply = true;
@@ -508,6 +514,7 @@ export const getHandlers = async (
         }
       }
     },
+    // eslint-disable-next-line consistent-return
     help: async (ctx) => {
       try {
         const commands = await ctx.getMyCommands();
