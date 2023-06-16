@@ -187,12 +187,7 @@ const requestVacanciesHeadHunter = async (
       // console.log('mapJsonDataByVacancyId', mapJsonDataByVacancyId);
 
       const vacanciesDataRawWithJSON = vacanciesDataRaw.map((v) => {
-        const id = v.id.split('/').at('-1');
-        if (!id) {
-          console.log(mapJsonDataByVacancyId[id]);
-          console.log({ id });
-        }
-        const rawJson = mapJsonDataByVacancyId[id][0];
+        const rawJson = mapJsonDataByVacancyId[v.id][0];
 
         return Object.assign(v, {
           responsesCount: rawJson?.responsesCount || 0, // todo: понять чем различается с totalResponsesCount
