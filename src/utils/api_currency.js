@@ -19,7 +19,7 @@ export const mapSymbolToCurrencyCode = Object.fromEntries(
 );
 
 export const getCurrencyRates = async (isTest = false) => {
-  const ratesFallback = { RUB: 75, USD: 1 };
+  const ratesFallback = { RUB: 80, USD: 1 };
 
   if (isTest) {
     return ratesFallback;
@@ -36,6 +36,9 @@ export const getCurrencyRates = async (isTest = false) => {
     const { rates } = res.data;
     // cache.set(`rates ${date}`, rates);
     cache.set('rates', rates);
+
+    console.log('\nrates USD->RUB', rates.RUB / rates.USD);
+
     // return { rates, timestamp, date };
     return rates;
   } catch (error) {
@@ -69,9 +72,7 @@ export const parseSalaryFromTitleRaw = (baseCurrency, rates, rawMin, rawMax, raw
   const currencySymbol = String(rawCurrencySymbol).trim();
 
   const currency = mapSymbolToCurrencyCode[currencySymbol] ?? currencySymbol;
-  // if (rawCurrencySymbol === '$') {
-  //   console.log({ currencyCode, rateConvertCurrency });
-  // }
+
   const isExistFork = rawMin && rawMax;
 
   const min = convertCurrency(
@@ -89,6 +90,7 @@ export const parseSalaryFromTitleRaw = (baseCurrency, rates, rawMin, rawMax, raw
 
   const minUSD = convertCurrency(min, rates, currency, USD);
   const maxUSD = convertCurrency(max, rates, currency, USD);
+
   const minF = `${Math.floor(min / 1000)}k`;
   const maxF = `${Math.floor(max / 1000)}k`;
   // eslint-disable-next-line no-nested-ternary

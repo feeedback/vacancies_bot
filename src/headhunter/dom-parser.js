@@ -23,13 +23,15 @@ const BASE_VACANCY_LINK = 'https://hh.ru/vacancy';
 export const parseSalaryFromTitleHH = (
   stringTitleVacancy,
   baseCurrency = 'RUB',
-  rates = { RUB: 75, USD: 1 }
+  rates = { RUB: 80, USD: 1 }
 ) => {
   // const regExpPatternSalary = /(?:(?:^(?:от)\s*(?:(\d[\s\d]*\d)+))|(?:^(?:до)\s*(?:(\d[\s\d]*\d)+))|(?:^(?:(\d[\s\d]*\d)+)\s[−‐‑-ꟷー一]\s(?:(\d[\s\d]*\d)+)))(?: (.+)$)/i;
   const regExpPatternSalary = /(?:(?:^(?:от)\s*(?:(\d[\s\d]*\d)+))|(?:^(?:до)\s*(?:(\d[\s\d]*\d)+))|(?:^(?:(\d[\s\d]*\d)+)\s*.?\s*(?:(\d[\s\d]*\d)+)))(?: (.+)$)/i;
   const mapCurrencyStrToSymbol = {
     'USD': '$',
     'руб.': '₽',
+    '$': '$',
+    '₽': '₽',
   };
   const salary = stringTitleVacancy.match(regExpPatternSalary);
 

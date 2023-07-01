@@ -96,6 +96,7 @@ export const excludeWordTitle = [
   '".NET+C#"',
   '"1C"',
   '"ASP"',
+  '"VOIP"',
   '"Atlassian"',
   '"TeamLead"',
   '"Drupal"',
