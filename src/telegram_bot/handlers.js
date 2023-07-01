@@ -201,9 +201,14 @@ const setExcludeWords = async (ctx, isSaveOld = false) => {
   ctx.telegram.webhookReply = true;
 };
 
-const getVacancy = async (ctx) => {
-  console.log('\n', nowMsDate(), getVacancy);
-  const userId = ctx.update.message.from.id;
+const checkUserPreparedForSearchVacancies = async (
+  ctx,
+  userId = ctx.update.message.from.id,
+  bot,
+  chatId
+) => {
+  console.log('\n', nowMsDate(), checkUserPreparedForSearchVacancies);
+
   const userState = mapUserIdToState[userId];
 
   if (!userState?.isStarted) {
@@ -212,19 +217,53 @@ const getVacancy = async (ctx) => {
   const rss = userState?.rss;
   const rss2 = userState?.rss2;
   const rss3 = userState?.rss3;
+  const rssLinks = [rss, rss2, rss3].filter(Boolean);
 
-  if (!rss) {
-    await ctx.replyWithMarkdown('RSS not found! Please add that with */rss* [link]');
-    console.log('user id', userId, 'not found rss');
-    return;
-  }
-  ctx.telegram.webhookReply = false;
+  try {
+    if (!rss) {
+      if (!ctx) {
+        await sendMD(bot, chatId, 'RSS not found! Please add that with */rss* [link]');
+      } else {
+        await ctx.replyWithMarkdown('RSS not found! Please add that with */rss* [link]');
+      }
+      console.log('user id', userId, 'not found rss');
 
-  if (!userState.excludeTags.length === 0) {
-    await ctx.replyWithMarkdown(
-      '_Ваш список исключаемых тегов пуст. Вы можете добавить их командой */extagsset*_'
-    );
+      return {};
+    }
+    ctx.telegram.webhookReply = false;
+
+    if (!userState.excludeTags.length === 0) {
+      if (!ctx) {
+        await sendMD(
+          bot,
+          chatId,
+          '_Ваш список исключаемых тегов пуст. Вы можете добавить их командой */extagsset*_'
+        );
+      } else {
+        await ctx.replyWithMarkdown(
+          '_Ваш список исключаемых тегов пуст. Вы можете добавить их командой */extagsset*_'
+        );
+      }
+    }
+  } catch (error) {
+    console.log(error);
+
+    if (error.response && error.response.statusCode === 403) {
+      console.log(error.response);
+
+      delete mapUserIdToState[userId];
+      redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
+    }
   }
+
+  return { userId, userState, rssLinks };
+};
+
+const getVacancy = async (ctx) => {
+  console.log('\n', nowMsDate(), getVacancy);
+
+  const { userState, rssLinks } = await checkUserPreparedForSearchVacancies(ctx);
+  if (!userState) return;
 
   const [dayRaw = 2, sourceRaw = 'ALL'] = ctx.update.message.text.slice(5).trim().split(' ');
 
@@ -242,7 +281,7 @@ const getVacancy = async (ctx) => {
 
   try {
     const { stringVacancies, vacanciesFiltered } = await getVacanciesHabrCareer(
-      [rss, rss2, rss3].filter(Boolean),
+      rssLinks,
       day,
       userState.excludeTags,
       userState.excludeWords,
@@ -301,32 +340,20 @@ const getVacancy = async (ctx) => {
 
 const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPingMs) => {
   console.log('\n', nowMsDate(), getVacancySub);
-  // const userId = ctx.update.message.from.id;
-  const userState = mapUserIdToState[userId];
-  const rss = userState?.rss;
-  const rss2 = userState?.rss2;
-  const rss3 = userState?.rss3;
 
-  if (!rss) {
-    await sendMD(bot, chatId, 'RSS not found! Please add that with */rss* [link]');
-    console.log('user id', userId, 'not found rss');
-    return;
-  }
-  bot.telegram.webhookReply = false;
-
-  if (!userState.excludeTags.length === 0) {
-    await sendMD(
-      bot,
-      chatId,
-      '_Ваш список исключаемых тегов пуст. Вы можете добавить их командой */extagsset*_'
-    );
-  }
+  const { userState, rssLinks } = await checkUserPreparedForSearchVacancies(
+    null,
+    userId,
+    bot,
+    chatId
+  );
+  if (!userState) return;
 
   const existHashes = userState.hashes;
 
   try {
     const { hashes, vacanciesFiltered, getStringifyVacancies } = await getVacanciesHabrCareer(
-      [rss, rss2, rss3].filter(Boolean),
+      rssLinks,
       isFirstSub ? 7 : 3,
       userState.excludeTags,
       userState.excludeWords,
