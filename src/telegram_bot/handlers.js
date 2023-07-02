@@ -289,7 +289,10 @@ const getVacanciesFromSources = async (
   lastDaysUnix,
   rssLinks,
   userState,
-  source = 'ALL'
+  source = 'ALL',
+  minSalary = 100_000,
+  maxSalary = 700_000,
+  addFiltersHH = {}
 ) => {
   console.log('\n', nowMsDate(), getVacanciesFromSources);
 
@@ -298,7 +301,10 @@ const getVacanciesFromSources = async (
     lastDays,
     userState.excludeTags,
     userState.excludeWords,
-    redisStore
+    redisStore,
+    minSalary,
+    maxSalary,
+    addFiltersHH
   );
 
   console.log('фильтрованные вакансии Habr.career', vacanciesFilteredHC.length);
@@ -310,7 +316,9 @@ const getVacanciesFromSources = async (
       lastDaysUnix,
       userState.HH.filter,
       userState.HH.words,
-      redisStore
+      redisStore,
+      minSalary,
+      maxSalary
     );
 
     console.log('фильтрованные вакансии HeadHunter', vacanciesFiltered.length);
@@ -327,8 +335,11 @@ const getVacanciesFromSources = async (
 };
 
 const getTopWordsFromDescriptionBySalary = async (ctx) => {
-  const { userState, rssLinks } = await checkUserPreparedForSearchVacancies(ctx);
+  // eslint-disable-next-line prefer-const
+  let { userState, rssLinks } = await checkUserPreparedForSearchVacancies(ctx);
   if (!userState) return;
+
+  rssLinks = rssLinks.map((rss) => `${rss}&with_salary=1`);
 
   const [, dayRaw = 2, sourceRaw = 'ALL'] = ctx.update.message.text.trim().split(' ');
   const source = ['HH', 'HC', 'ALL'].includes(sourceRaw) ? sourceRaw : 'ALL';
@@ -348,7 +359,11 @@ const getTopWordsFromDescriptionBySalary = async (ctx) => {
     day,
     dayUnix,
     rssLinks,
-    userState
+    userState,
+    'ALL',
+    1,
+    2_000_000,
+    { isSalary: 1 }
   );
 
   const BLACK_FILTER_WORDS = new Set([
@@ -423,7 +438,12 @@ const getTopWordsFromDescriptionBySalary = async (ctx) => {
     'однако',
     'есть',
     'именно',
+    'из',
+    'со',
+    'не',
     'and',
+    'no',
+    'not',
   ]);
 
   const topWordsByCountByFilteredHC = getTopWordsByCountFromVacanciesDataByField(
@@ -431,7 +451,7 @@ const getTopWordsFromDescriptionBySalary = async (ctx) => {
     'text'
   );
   const topWordsHC = Object.entries(topWordsByCountByFilteredHC)
-    .filter(([word, count]) => word.length >= 2 && count >= 1)
+    .filter(([word, count]) => word.length >= 2 && count >= 2)
     .filter(([word]) => !BLACK_FILTER_WORDS.has(word))
     // .map(([word]) => word);
     .slice(0, 100);
@@ -443,11 +463,13 @@ const getTopWordsFromDescriptionBySalary = async (ctx) => {
     'text'
   );
   const topWordsHH = Object.entries(topWordsByCountByFilteredHH)
-    .filter(([word, count]) => word.length >= 2 && count >= 1)
+    .filter(([word, count]) => word.length >= 2 && count >= 2)
     .filter(([word]) => !BLACK_FILTER_WORDS.has(word))
     // .map(([word]) => word);
-    .slice(0, 200);
-  console.log('topWords HH', topWordsHH);
+    .slice(0, 300);
+  console.log('topWords HH', topWordsHH.slice(0, 100));
+  console.log('topWords HH', topWordsHH.slice(100, 200));
+  console.log('topWords HH', topWordsHH.slice(200, 300));
 };
 
 const getVacancy = async (ctx) => {
@@ -529,7 +551,13 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
   ).unix();
 
   try {
-    const { vacancies, hashes } = await getVacanciesFromSources(day, dayUnix, rssLinks, userState);
+    const { vacancies, hashes } = await getVacanciesFromSources(
+      day,
+      dayUnix,
+      rssLinks,
+      userState,
+      'ALL'
+    );
 
     const { newVacanciesStr, newHashes } = await filterOnlyNewVacancies(
       vacancies,
@@ -652,6 +680,8 @@ export const getHandlers = async (
       async (ctx, next) => {
         const d = Date.now();
         try {
+          console.log('\n', nowMsDate(), `[COMMAND] ${ctx?.update?.message?.text?.trim()}`);
+
           await next(); // runs next middleware
         } catch (error) {
           console.log(error);

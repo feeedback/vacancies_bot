@@ -8,16 +8,20 @@ const getVacanciesHeadHunter = async (
   lastRequestTime = dayjs().startOf('day').unix(),
   filter = myFilter,
   filtersWords = myFiltersWords,
-  cache
+  cache,
+  minSalary = 100_000,
+  maxSalary = 700_000,
+  addFilters = {}
 ) => {
   const logT = Date.now();
   const { vacanciesData: vacanciesFilteredRaw } = await requestVacancies(
     filter,
     filtersWords,
     lastRequestTime,
-    100_000,
-    700_000,
-    cache
+    minSalary,
+    maxSalary,
+    cache,
+    addFilters
   );
 
   // const vacanciesFiltered = _.uniqBy(vacanciesFilteredRaw, 'hashContent');

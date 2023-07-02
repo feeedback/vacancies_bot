@@ -14,7 +14,9 @@ const getVacanciesHabrCareer = async (
   day = 2,
   vacancyExcludeTags = vacancyExcludeTagsMy,
   vacancyExcludeWordsInDesc = vacancyExcludeWordsInDescMy,
-  cache
+  cache,
+  minSalary = 100_000,
+  maxSalary = 700_000
 ) => {
   const logT = Date.now();
   let vacanciesRaw = [];
@@ -39,8 +41,8 @@ const getVacanciesHabrCareer = async (
     vacancyExcludeWordsInDesc,
     0,
     0,
-    100_000,
-    700_000
+    minSalary,
+    maxSalary
   );
   const vacanciesFiltered = vacanciesFilteredRaw;
   // .filter(({ salary: { avgUSD } }) => avgUSD > 0);

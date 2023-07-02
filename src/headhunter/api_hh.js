@@ -57,7 +57,13 @@ const getStringifyVacancy = ({
 export const getStringifyVacancies = (vacanciesFiltered) =>
   vacanciesFiltered.map(getStringifyVacancy);
 
-const createFilterSearch = (userFilter = {}, userWords = {}, lastRequestTime, isStartDay) => {
+const createFilterSearch = (
+  userFilter = {},
+  userWords = {},
+  lastRequestTime,
+  isStartDay,
+  addFilters = {}
+) => {
   const { excludeWordTitle = [], excludeWordDesc = [], includeWordDesc = [] } = userWords;
 
   const exTitle = excludeWordTitle.length
@@ -78,6 +84,7 @@ const createFilterSearch = (userFilter = {}, userWords = {}, lastRequestTime, is
       .unix(lastRequestTime)
       .format(isStartDay ? 'DD.MM.YYYY' : 'DD.MM.YYYY HH:mm:ss'),
     text: searchText,
+    ...addFilters,
   };
 
   return filterVariable;
@@ -124,7 +131,8 @@ const requestVacanciesHeadHunter = async (
   lastRequestTimeRaw = null,
   minSalary = 0,
   maxSalary = Infinity,
-  redisCache
+  redisCache,
+  addFilters
 ) => {
   const rates = await getCurrencyRates();
 
@@ -139,7 +147,7 @@ const requestVacanciesHeadHunter = async (
   // isStartOldDay = lastRequestTime !== dayjs().startOf('day').unix() && dayjs.unix().format('HH:mm:ss') === '00:00:00';
   // можно добавить что когда запрашивается /get 2,3,... то не отображается текущий день, чтобы можно было сохранять в кэш
 
-  const filter = createFilterSearch(userFilter, userWords, lastRequestTime, isStartDay);
+  const filter = createFilterSearch(userFilter, userWords, lastRequestTime, isStartDay, addFilters);
   const urlRaw = new URL(
     `${requestConfig.BASE_URL}?${qs.stringify(filter, { arrayFormat: 'repeat' })}`
   );
