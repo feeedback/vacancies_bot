@@ -181,8 +181,8 @@ export const parseFilterFormatVacancies = async (
   return { vacanciesFiltered, vacancies };
 };
 
-export const getStringifyVacancies = (vacanciesFiltered) => {
-  const stringVacancies = vacanciesFiltered.map(
+export const getStringifyVacancies = (vacanciesFiltered) =>
+  vacanciesFiltered.map(
     ({
       content,
       author,
@@ -207,8 +207,6 @@ export const getStringifyVacancies = (vacanciesFiltered) => {
       return `${salaryOut} | ${ago} | «${authorR}» | *«${titleShortR}»* | ${tagsStr} | _${contentFormatR}_ ► ${linkB}`;
     }
   );
-  return stringVacancies;
-};
 
 export const getTopTagsByCount = (vacancies) => {
   const tagsVacancies = vacancies.flatMap(({ tagsLowerCase }) => tagsLowerCase);

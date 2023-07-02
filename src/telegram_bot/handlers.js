@@ -11,6 +11,8 @@ import getVacanciesHabrCareer from '../habr_career/index.js';
 import getVacanciesHeadHunter from '../headhunter/index.js';
 import { botStartMessage, commandDescription, initStateUsers } from './settings.js';
 import { nowMsDate, chunkTextBlocksBySizeByte, delayMs } from '../utils/utils.js';
+import { getStringifyVacancies as getStringifyVacanciesHabrCareer } from '../habr_career/api_habr_career.js';
+import { getStringifyVacancies as getStringifyVacanciesHH } from '../headhunter/api_hh.js';
 
 dotenv.config();
 
@@ -201,6 +203,65 @@ const setExcludeWords = async (ctx, isSaveOld = false) => {
   ctx.telegram.webhookReply = true;
 };
 
+const stringifyVacancies = (vacancies) => [
+  ...getStringifyVacanciesHabrCareer(vacancies.filter((v) => v.source === 'HABR_CAREER')),
+  ...getStringifyVacanciesHH(vacancies.filter((v) => v.source === 'HEADHUNTER')),
+];
+
+const filterOnlyNewVacancies = async (allVacancies, hashes, existHashes) => {
+  console.log('\n', nowMsDate(), filterOnlyNewVacancies);
+  const newHashes = hashes.filter((vac) => !existHashes.includes(vac));
+
+  const mapHashToVacancy = _.groupBy(allVacancies, 'hashContent');
+
+  const newVacancies = newHashes.map((hash) => mapHashToVacancy[hash][0]);
+
+  const newVacanciesStr = stringifyVacancies(newVacancies);
+
+  return { newVacancies, newVacanciesStr, newHashes };
+};
+
+const getVacanciesFromSources = async (
+  lastDays,
+  lastDaysUnix,
+  rssLinks,
+  userState,
+  source = 'ALL'
+) => {
+  console.log('\n', nowMsDate(), getVacanciesFromSources);
+
+  const { vacanciesFiltered: vacanciesFilteredHC, hashes: hashesHC } = await getVacanciesHabrCareer(
+    rssLinks,
+    lastDays,
+    userState.excludeTags,
+    userState.excludeWords,
+    redisStore
+  );
+  console.log('фильтрованные вакансии Habr.career', vacanciesFilteredHC.length);
+
+  const vacanciesFilteredHH = [];
+  const hashesHH = [];
+  if (source !== 'HC') {
+    const { vacanciesFiltered, hashes } = await getVacanciesHeadHunter(
+      lastDaysUnix,
+      userState.HH.filter,
+      userState.HH.words,
+      redisStore
+    );
+
+    console.log('фильтрованные вакансии HeadHunter', vacanciesFiltered.length);
+    vacanciesFilteredHH.push(...vacanciesFiltered);
+    hashesHH.push(...hashes);
+  }
+
+  const vacancies = [...vacanciesFilteredHC, ...vacanciesFilteredHH];
+  const vacanciesStr = stringifyVacancies(vacancies);
+
+  const hashes = [...hashesHC, ...hashesHH];
+
+  return { vacancies, vacanciesStr, hashes };
+};
+
 const checkUserPreparedForSearchVacancies = async (
   ctx,
   userId = ctx.update.message.from.id,
@@ -230,7 +291,7 @@ const checkUserPreparedForSearchVacancies = async (
 
       return {};
     }
-    ctx.telegram.webhookReply = false;
+    if (ctx) ctx.telegram.webhookReply = false;
 
     if (!userState.excludeTags.length === 0) {
       if (!ctx) {
@@ -262,7 +323,7 @@ const checkUserPreparedForSearchVacancies = async (
 const getVacancy = async (ctx) => {
   console.log('\n', nowMsDate(), getVacancy);
 
-  const { userState, rssLinks } = await checkUserPreparedForSearchVacancies(ctx);
+  const { userState, userId, rssLinks } = await checkUserPreparedForSearchVacancies(ctx);
   if (!userState) return;
 
   const [dayRaw = 2, sourceRaw = 'ALL'] = ctx.update.message.text.slice(5).trim().split(' ');
@@ -274,45 +335,25 @@ const getVacancy = async (ctx) => {
   if (isNaN(dayRaw)) {
     day = 2;
   }
+  const dayUnix = dayjs()
+    .startOf('day')
+    .subtract(day - 1, 'day')
+    .unix();
   console.log('\n', nowMsDate(), getVacancy, { day, source });
 
   // await ctx.reply('Идет обработка вакансий, пожалуйста, подождите несколько секунд...');
   ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
 
   try {
-    const { stringVacancies, vacanciesFiltered } = await getVacanciesHabrCareer(
-      rssLinks,
+    const { vacanciesStr } = await getVacanciesFromSources(
       day,
-      userState.excludeTags,
-      userState.excludeWords,
-      redisStore
+      dayUnix,
+      rssLinks,
+      userState,
+      source
     );
-    const allVacancies = [...stringVacancies];
 
-    console.log('вакансии получены Habr.career', vacanciesFiltered.length);
-
-    const dayUnix = dayjs()
-      .startOf('day')
-      .subtract(day - 1, 'day')
-      .unix();
-
-    if (source !== 'HC') {
-      const {
-        stringVacancies: stringVacanciesHH,
-        vacanciesFiltered: vacanciesFilteredHH,
-      } = await getVacanciesHeadHunter(
-        dayUnix,
-        userState.HH.filter,
-        userState.HH.words,
-        redisStore
-      );
-
-      console.log('вакансии получены HeadHunter', vacanciesFilteredHH.length);
-
-      allVacancies.push(...stringVacanciesHH);
-    }
-
-    const chunks = chunkTextBlocksBySizeByte(allVacancies, 4096);
+    const chunks = chunkTextBlocksBySizeByte(vacanciesStr, 4096);
 
     for (const messageChunk of chunks) {
       ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
@@ -332,8 +373,13 @@ const getVacancy = async (ctx) => {
     ctx.telegram.webhookReply = true;
   } catch (error) {
     console.log(error);
-  }
 
+    if (error.response && error.response.statusCode === 403) {
+      console.log(error.response);
+      delete mapUserIdToState[userId];
+      redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
+    }
+  }
   // const tempMessageId = ctx.message.message_id + 1;
   // ctx.deleteMessage(tempMessageId);
 };
@@ -349,32 +395,20 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
   );
   if (!userState) return;
 
-  const existHashes = userState.hashes;
+  const day = isFirstSub ? 7 : 3;
+  const dayUnix = (isFirstSub
+    ? dayjs().subtract(7, 'day')
+    : dayjs().subtract(intervalPingMs + 5000, 'ms')
+  ).unix();
 
   try {
-    const { hashes, vacanciesFiltered, getStringifyVacancies } = await getVacanciesHabrCareer(
-      rssLinks,
-      isFirstSub ? 7 : 3,
-      userState.excludeTags,
-      userState.excludeWords,
-      redisStore
+    const { vacancies, hashes } = await getVacanciesFromSources(day, dayUnix, rssLinks, userState);
+
+    const { newVacanciesStr, newHashes } = await filterOnlyNewVacancies(
+      vacancies,
+      hashes,
+      userState.hashes
     );
-    console.log('фильтрованные вакансии Habr.career', vacanciesFiltered.length);
-
-    const dayUnix = (isFirstSub
-      ? dayjs().subtract(7, 'day')
-      : dayjs().subtract(intervalPingMs + 5000, 'ms')
-    ).unix();
-
-    const {
-      vacanciesFiltered: vacanciesFilteredHH,
-      getStringifyVacancies: getStringifyVacanciesHH,
-      hashes: hashesHH,
-    } = await getVacanciesHeadHunter(dayUnix, userState.HH.filter, userState.HH.words, redisStore);
-
-    console.log('фильтрованные вакансии HeadHunter', vacanciesFilteredHH.length);
-
-    const newHashes = [...hashes, ...hashesHH].filter((vac) => !existHashes.includes(vac));
 
     if (!newHashes.length) {
       console.log('getVacancySub нет новых вакансий');
@@ -395,15 +429,6 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
       return;
     }
     await bot.telegram.sendChatAction(chatId, 'typing');
-
-    const allVacancies = [...vacanciesFiltered, ...vacanciesFilteredHH];
-    const newVacancy = newHashes.map((hash) =>
-      allVacancies.find(({ hashContent }) => hashContent === hash)
-    );
-    const newVacanciesStr = [
-      ...getStringifyVacancies(newVacancy.filter((v) => v.source === 'HABR_CAREER')),
-      ...getStringifyVacanciesHH(newVacancy.filter((v) => v.source === 'HEADHUNTER')),
-    ];
 
     for (const messageChunk of chunkTextBlocksBySizeByte(newVacanciesStr, 4096)) {
       await bot.telegram.sendMessage(chatId, messageChunk.join('\n\n').replace('`', ''), {

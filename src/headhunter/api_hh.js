@@ -54,7 +54,8 @@ const getStringifyVacancy = ({
   return `${salaryOut} | ${agoStr} |${counts}| «${companyR}» | *«${titleR}»* | ${tasksR} ${skillsR} | ${cityWithLinks}. ► ${linkB}`;
 };
 
-const getStringifyVacancies = (vacanciesFiltered) => vacanciesFiltered.map(getStringifyVacancy);
+export const getStringifyVacancies = (vacanciesFiltered) =>
+  vacanciesFiltered.map(getStringifyVacancy);
 
 const createFilterSearch = (userFilter = {}, userWords = {}, lastRequestTime, isStartDay) => {
   const { excludeWordTitle = [], excludeWordDesc = [], includeWordDesc = [] } = userWords;
@@ -154,7 +155,6 @@ const requestVacanciesHeadHunter = async (
     }));
     return {
       vacanciesData: cachedVacanciesData,
-      getStringifyVacancies,
     };
   }
   console.log('request vacancies HeadHunter', urlRaw.toString());
@@ -229,6 +229,6 @@ const requestVacanciesHeadHunter = async (
 
   redisCache.set(keyCache, JSON.stringify(vacancies), 'EX', isStartDay ? 60 * 60 * 2 : 60 * 5); // 2 hour // 5 min
 
-  return { vacanciesData: vacancies, getStringifyVacancies };
+  return { vacanciesData: vacancies };
 };
 export default requestVacanciesHeadHunter;

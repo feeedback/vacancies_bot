@@ -11,7 +11,7 @@ const getVacanciesHeadHunter = async (
   cache
 ) => {
   const logT = Date.now();
-  const { vacanciesData: vacanciesFilteredRaw, getStringifyVacancies } = await requestVacancies(
+  const { vacanciesData: vacanciesFilteredRaw } = await requestVacancies(
     filter,
     filtersWords,
     lastRequestTime,
@@ -50,15 +50,11 @@ const getVacanciesHeadHunter = async (
   // .filter(({ salary: { avgUSD } }) => avgUSD > 0);
   const hashes = vacanciesFiltered.map(({ hashContent }) => hashContent);
 
-  const stringVacancies = getStringifyVacancies(vacanciesFiltered);
-
   console.log('getVacanciesHeadHunter', Date.now() - logT, 'ms');
 
   return {
-    stringVacancies,
     hashes,
     vacanciesFiltered,
-    getStringifyVacancies,
   };
 };
 
