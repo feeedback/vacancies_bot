@@ -10,7 +10,12 @@ import Redis from 'ioredis';
 import getVacanciesHabrCareer from '../habr_career/index.js';
 import getVacanciesHeadHunter from '../headhunter/index.js';
 import { botStartMessage, commandDescription, initStateUsers } from './settings.js';
-import { nowMsDate, chunkTextBlocksBySizeByte, delayMs } from '../utils/utils.js';
+import {
+  nowMsDate,
+  chunkTextBlocksBySizeByte,
+  delayMs,
+  getTopWordsByCountFromVacanciesDataByField,
+} from '../utils/utils.js';
 import { getStringifyVacancies as getStringifyVacanciesHabrCareer } from '../habr_career/api_habr_career.js';
 import { getStringifyVacancies as getStringifyVacanciesHH } from '../headhunter/api_hh.js';
 
@@ -203,65 +208,6 @@ const setExcludeWords = async (ctx, isSaveOld = false) => {
   ctx.telegram.webhookReply = true;
 };
 
-const stringifyVacancies = (vacancies) => [
-  ...getStringifyVacanciesHabrCareer(vacancies.filter((v) => v.source === 'HABR_CAREER')),
-  ...getStringifyVacanciesHH(vacancies.filter((v) => v.source === 'HEADHUNTER')),
-];
-
-const filterOnlyNewVacancies = async (allVacancies, hashes, existHashes) => {
-  console.log('\n', nowMsDate(), filterOnlyNewVacancies);
-  const newHashes = hashes.filter((vac) => !existHashes.includes(vac));
-
-  const mapHashToVacancy = _.groupBy(allVacancies, 'hashContent');
-
-  const newVacancies = newHashes.map((hash) => mapHashToVacancy[hash][0]);
-
-  const newVacanciesStr = stringifyVacancies(newVacancies);
-
-  return { newVacancies, newVacanciesStr, newHashes };
-};
-
-const getVacanciesFromSources = async (
-  lastDays,
-  lastDaysUnix,
-  rssLinks,
-  userState,
-  source = 'ALL'
-) => {
-  console.log('\n', nowMsDate(), getVacanciesFromSources);
-
-  const { vacanciesFiltered: vacanciesFilteredHC, hashes: hashesHC } = await getVacanciesHabrCareer(
-    rssLinks,
-    lastDays,
-    userState.excludeTags,
-    userState.excludeWords,
-    redisStore
-  );
-  console.log('фильтрованные вакансии Habr.career', vacanciesFilteredHC.length);
-
-  const vacanciesFilteredHH = [];
-  const hashesHH = [];
-  if (source !== 'HC') {
-    const { vacanciesFiltered, hashes } = await getVacanciesHeadHunter(
-      lastDaysUnix,
-      userState.HH.filter,
-      userState.HH.words,
-      redisStore
-    );
-
-    console.log('фильтрованные вакансии HeadHunter', vacanciesFiltered.length);
-    vacanciesFilteredHH.push(...vacanciesFiltered);
-    hashesHH.push(...hashes);
-  }
-
-  const vacancies = [...vacanciesFilteredHC, ...vacanciesFilteredHH];
-  const vacanciesStr = stringifyVacancies(vacancies);
-
-  const hashes = [...hashesHC, ...hashesHH];
-
-  return { vacancies, vacanciesStr, hashes };
-};
-
 const checkUserPreparedForSearchVacancies = async (
   ctx,
   userId = ctx.update.message.from.id,
@@ -320,14 +266,195 @@ const checkUserPreparedForSearchVacancies = async (
   return { userId, userState, rssLinks };
 };
 
-const getVacancy = async (ctx) => {
-  console.log('\n', nowMsDate(), getVacancy);
+const stringifyVacancies = (vacancies) => [
+  ...getStringifyVacanciesHabrCareer(vacancies.filter((v) => v.source === 'HABR_CAREER')),
+  ...getStringifyVacanciesHH(vacancies.filter((v) => v.source === 'HEADHUNTER')),
+];
 
+const filterOnlyNewVacancies = async (allVacancies, hashes, existHashes) => {
+  console.log('\n', nowMsDate(), filterOnlyNewVacancies);
+  const newHashes = hashes.filter((vac) => !existHashes.includes(vac));
+
+  const mapHashToVacancy = _.groupBy(allVacancies, 'hashContent');
+
+  const newVacancies = newHashes.map((hash) => mapHashToVacancy[hash][0]);
+
+  const newVacanciesStr = stringifyVacancies(newVacancies);
+
+  return { newVacancies, newVacanciesStr, newHashes };
+};
+
+const getVacanciesFromSources = async (
+  lastDays,
+  lastDaysUnix,
+  rssLinks,
+  userState,
+  source = 'ALL'
+) => {
+  console.log('\n', nowMsDate(), getVacanciesFromSources);
+
+  const { vacanciesFiltered: vacanciesFilteredHC, hashes: hashesHC } = await getVacanciesHabrCareer(
+    rssLinks,
+    lastDays,
+    userState.excludeTags,
+    userState.excludeWords,
+    redisStore
+  );
+
+  console.log('фильтрованные вакансии Habr.career', vacanciesFilteredHC.length);
+
+  const vacanciesFilteredHH = [];
+  const hashesHH = [];
+  if (source !== 'HC') {
+    const { vacanciesFiltered, hashes } = await getVacanciesHeadHunter(
+      lastDaysUnix,
+      userState.HH.filter,
+      userState.HH.words,
+      redisStore
+    );
+
+    console.log('фильтрованные вакансии HeadHunter', vacanciesFiltered.length);
+    vacanciesFilteredHH.push(...vacanciesFiltered);
+    hashesHH.push(...hashes);
+  }
+
+  const vacancies = [...vacanciesFilteredHC, ...vacanciesFilteredHH];
+  const vacanciesStr = stringifyVacancies(vacancies);
+
+  const hashes = [...hashesHC, ...hashesHH];
+
+  return { vacanciesFilteredHC, vacanciesFilteredHH, vacancies, vacanciesStr, hashes };
+};
+
+const getTopWordsFromDescriptionBySalary = async (ctx) => {
+  const { userState, rssLinks } = await checkUserPreparedForSearchVacancies(ctx);
+  if (!userState) return;
+
+  const [, dayRaw = 2, sourceRaw = 'ALL'] = ctx.update.message.text.trim().split(' ');
+  const source = ['HH', 'HC', 'ALL'].includes(sourceRaw) ? sourceRaw : 'ALL';
+
+  let day = Number(dayRaw);
+  // eslint-disable-next-line no-restricted-globals
+  if (isNaN(dayRaw)) {
+    day = 2;
+  }
+  const dayUnix = dayjs()
+    .startOf('day')
+    .subtract(day - 1, 'day')
+    .unix();
+  console.log('\n', nowMsDate(), getTopWordsFromDescriptionBySalary, { day, source });
+
+  const { vacanciesFilteredHC, vacanciesFilteredHH } = await getVacanciesFromSources(
+    day,
+    dayUnix,
+    rssLinks,
+    userState
+  );
+
+  const BLACK_FILTER_WORDS = new Set([
+    'в',
+    'до',
+    'из,за',
+    'за',
+    'к',
+    'над',
+    'под',
+    'перед',
+    'у',
+    'через',
+    'возле',
+    'мимо',
+    'около',
+    'по',
+    'после',
+    'от',
+    'ради',
+    'благодаря',
+    'ввиду',
+    'вследствие',
+    'для',
+    'на',
+    'о',
+    'об',
+    'обо',
+    'про',
+    'насчет',
+    'вопреки',
+    'с',
+    'вроде',
+    'наподобие',
+    'что',
+    'чтобы',
+    'дабы',
+    'как',
+    'когда',
+    'коли',
+    'ежели',
+    'раз',
+    'ибо',
+    'поэтому',
+    'пускай',
+    'хотя',
+    'пока',
+    'подобно',
+    'лишь',
+    'едва',
+    'точно',
+    'будто',
+    'словно',
+    'если',
+    'кто',
+    'который',
+    'какой',
+    'где',
+    'куда',
+    'откуда',
+    'и',
+    'да',
+    'ни',
+    'тоже',
+    'также',
+    'или',
+    'либо',
+    'то',
+    'а',
+    'но',
+    'зато',
+    'однако',
+    'есть',
+    'именно',
+    'and',
+  ]);
+
+  const topWordsByCountByFilteredHC = getTopWordsByCountFromVacanciesDataByField(
+    vacanciesFilteredHC,
+    'text'
+  );
+  const topWordsHC = Object.entries(topWordsByCountByFilteredHC)
+    .filter(([word, count]) => word.length >= 2 && count >= 1)
+    .filter(([word]) => !BLACK_FILTER_WORDS.has(word))
+    // .map(([word]) => word);
+    .slice(0, 100);
+  console.log('topWords Habr.Career', topWordsHC);
+
+  //
+  const topWordsByCountByFilteredHH = getTopWordsByCountFromVacanciesDataByField(
+    vacanciesFilteredHH,
+    'text'
+  );
+  const topWordsHH = Object.entries(topWordsByCountByFilteredHH)
+    .filter(([word, count]) => word.length >= 2 && count >= 1)
+    .filter(([word]) => !BLACK_FILTER_WORDS.has(word))
+    // .map(([word]) => word);
+    .slice(0, 200);
+  console.log('topWords HH', topWordsHH);
+};
+
+const getVacancy = async (ctx) => {
   const { userState, userId, rssLinks } = await checkUserPreparedForSearchVacancies(ctx);
   if (!userState) return;
 
   const [dayRaw = 2, sourceRaw = 'ALL'] = ctx.update.message.text.slice(5).trim().split(' ');
-
   const source = ['HH', 'HC', 'ALL'].includes(sourceRaw) ? sourceRaw : 'ALL';
 
   let day = Number(dayRaw);
@@ -666,6 +793,9 @@ export const getHandlers = async (
 
       get: async (ctx) => {
         await getVacancy(ctx);
+      },
+      topwords: async (ctx) => {
+        await getTopWordsFromDescriptionBySalary(ctx);
       },
       sub: async (ctx) => {
         const userId = ctx.update.message.from.id;

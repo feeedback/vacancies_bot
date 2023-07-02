@@ -137,22 +137,29 @@ export const parseFilterFormatVacancies = async (
         };
       }
 
+      // const textDesc = String(vacancy.content).slice(
+      //   0,
+      //   vacancy.content.indexOf(TAGS_START_TITLE) - 1
+      // );
+
       const tags = String(vacancy.content)
         .slice(vacancy.content.indexOf(TAGS_START_TITLE) + TAGS_START_TITLE.length, -1)
         .split(', ')
         .map((tag) => tag.slice(1));
 
       const ago = dayjs(dayjs(vacancy.isoDate)).fromNow();
+      const titleShort = vacancy.title.match(/^Требуется «([^»]+?)»/)[1];
 
       return {
         ...vacancy,
-        titleShort: vacancy.title.match(/^Требуется «([^»]+?)»/)[1],
+        titleShort,
         date: dayjs(vacancy.isoDate),
         ago: ago === 'a few seconds ago' ? 'a minute ago' : ago,
         salary,
         tags,
         tagsLowerCase: tags.map((tag) => tag.toLowerCase()),
         source: 'HABR_CAREER',
+        text: [titleShort, vacancy.author, tags].join('\n'),
       };
     });
 
@@ -214,14 +221,4 @@ export const getTopTagsByCount = (vacancies) => {
     Object.entries(_.countBy(tagsVacancies)).sort(([, vA], [, vB]) => vB - vA)
   );
   return topTagsByCount;
-};
-
-export const getTopWordByCount = (vacancies) => {
-  const wordTitleVacancies = vacancies.flatMap(({ titleShort }) =>
-    _.words(titleShort.toLowerCase())
-  );
-  const topWordsByCount = Object.fromEntries(
-    Object.entries(_.countBy(wordTitleVacancies)).sort(([, vA], [, vB]) => vB - vA)
-  );
-  return topWordsByCount;
 };

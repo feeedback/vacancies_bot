@@ -1,14 +1,13 @@
 import _ from 'lodash';
-
 import vacancyExcludeTagsMy from '../../data/settings/habr_career/exclude_tags.js';
 import vacancyExcludeWordsInDescMy from '../../data/settings/habr_career/exclude_words_title.js';
 import {
   getVacancyByFilterFromRssHabrCareer,
   parseFilterFormatVacancies,
   getTopTagsByCount,
-  getTopWordByCount,
 } from './api_habr_career.js';
 import { getCurrencyRates } from '../utils/api_currency.js';
+import { getTopWordsByCountFromVacanciesDataByField } from '../utils/utils.js';
 
 const getVacanciesHabrCareer = async (
   url,
@@ -49,8 +48,11 @@ const getVacanciesHabrCareer = async (
   const topTagsByCount = getTopTagsByCount(vacancies);
   const topTagsByCountByFiltered = getTopTagsByCount(vacanciesFiltered);
 
-  const topWordsByCount = getTopWordByCount(vacancies);
-  const topWordsByCountByFiltered = getTopWordByCount(vacanciesFiltered);
+  const topWordsByCount = getTopWordsByCountFromVacanciesDataByField(vacancies, 'titleShort');
+  const topWordsByCountByFiltered = getTopWordsByCountFromVacanciesDataByField(
+    vacanciesFiltered,
+    'titleShort'
+  );
 
   const hashes = vacanciesFiltered.map(({ hashContent }) => hashContent);
   console.log('getVacanciesHabrCareer', Date.now() - logT, 'ms');

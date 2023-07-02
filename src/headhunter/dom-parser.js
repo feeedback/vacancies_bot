@@ -111,6 +111,7 @@ export const parseVacanciesFromDom = async (data, redisCache) => {
     //    getElByAttr('vacancy-serp__vacancy-date', '.vacancy-serp-item__publication-date_short') ||
     //    dayjs().format('DD-MM');
     const content = [title, company, salaryStr, tasks, skills, schedule].join('\n');
+    const text = [title, company, tasks, skills].join('\n');
 
     // const bumpedAt = dayjs.utc(dateMonthDay, 'DD-MM').unix();
     // const bumpedAgo = dayjs().to(dayjs.unix(bumpedAt));
@@ -143,6 +144,7 @@ export const parseVacanciesFromDom = async (data, redisCache) => {
       createdAt,
       // bumpedAgo,
       // content,
+      text,
       hashContent,
       ago: ago === 'a few seconds ago' ? 'a minute ago' : ago,
       source: 'HEADHUNTER',

@@ -28,6 +28,7 @@ const bot = new Telegraf(process.env.TELEGRAM_BOT_API, { handlerTimeout: 5 * 60 
   bot.command('unsub', handlers.command.unsub); //
 
   bot.command('get', handlers.command.get);
+  bot.command('topwords', handlers.command.topwords); //
   // bot.context.reply()
   // bot.telegram.sendMessage('1', { parse_mode: 'Markdown' });
   // Telegraf.reply()

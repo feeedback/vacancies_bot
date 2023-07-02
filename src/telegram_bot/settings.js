@@ -38,6 +38,7 @@ export const commandDescription = [
     command: '/exwordsadd',
     description: 'Add new words with save old, vacancies with which will be excluded',
   },
+  { command: '/topwords', description: 'Get top words from vacancies description' },
 ];
 
 export const initStateUsers = {

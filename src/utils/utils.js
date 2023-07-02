@@ -1,4 +1,5 @@
 /* eslint-disable no-bitwise */
+import _ from 'lodash';
 import { fileURLToPath } from 'url';
 // import qs from 'qs';
 import stringSimilarity from 'string-similarity';
@@ -86,3 +87,12 @@ export const getStringSimilarity = (str1 = '', str2 = '') =>
 // console.log(getHashByStr('a:1').length);
 // console.log(getHashByStr('a:1', 'md5').length);
 // console.log(crypto.getHashes());
+
+export const getTopWordsByCountFromVacanciesDataByField = (vacancies, field) => {
+  const wordsVacancies = vacancies.flatMap((v) => _.words(v[field].toLowerCase()));
+
+  const topWordsByCount = Object.fromEntries(
+    Object.entries(_.countBy(wordsVacancies)).sort(([, vA], [, vB]) => vB - vA)
+  );
+  return topWordsByCount;
+};
