@@ -208,6 +208,7 @@ const requestVacanciesHeadHunter = async (
       } else {
         const resJSON = await axios.get(urlJSON, { headers: requestConfig.headersJson });
         pageJSON = resJSON.data.vacancySearchResult.vacancies.map((rawJson) => ({
+          vacancyId: rawJson?.vacancyId,
           responsesCount: rawJson?.responsesCount || 0, // todo: понять чем различается с totalResponsesCount
           online_users_count: rawJson?.online_users_count || 0,
           creationTime: rawJson?.creationTime,
@@ -224,7 +225,8 @@ const requestVacanciesHeadHunter = async (
 
       const vacanciesDataRawWithJSON = vacanciesDataRaw.map((v) => {
         if (!mapJsonDataByVacancyId[v.id]?.[0]) {
-          // console.log('not vacancy in JSON', v);
+          console.log('not vacancy in JSON', v);
+          console.log('not vacancy in JSON', mapJsonDataByVacancyId);
           return v;
         }
         const json = mapJsonDataByVacancyId[v.id][0];
