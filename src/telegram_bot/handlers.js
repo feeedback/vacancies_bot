@@ -395,7 +395,7 @@ const getTopWordsFromDescriptionBySalary = async (ctx) => {
   //
   const {
     mapWordToSalariesPoints: mapWordToSalariesPointsHH,
-    // topWordsByCount: topWordsByCountByFilteredHH,
+    topWordsByCount: topWordsByCountByFilteredHH,
   } = getTopWordsByCountFromVacanciesDataByFieldSalary(vacanciesFilteredHH, 'text');
   // const topWordsHH = Object.entries(topWordsByCountByFilteredHH)
   //   .filter(([word, count]) => word.length >= 2 && count >= 3)
@@ -405,12 +405,24 @@ const getTopWordsFromDescriptionBySalary = async (ctx) => {
   // console.log('topWords HH', topWordsHH.slice(0, 10));
   // console.log('mapWordToSalariesPoints HH', mapWordToSalariesPointsHH);
 
+  await writeFile(
+    `raw-top-words-by-count_by_N${vacanciesFilteredHH.length}.csv`,
+    JSON.stringify(topWordsByCountByFilteredHH),
+    { encoding: 'utf-8' }
+  );
+
+  await writeFile(
+    `raw-words-and-salary_by_N${vacanciesFilteredHH.length}.csv`,
+    JSON.stringify(mapWordToSalariesPointsHH),
+    { encoding: 'utf-8' }
+  );
+
   const mapWordToMeanSalary = Object.fromEntries(
     Object.entries(mapWordToSalariesPointsHH)
       .map(([word, salaries]) => [word, _.mean(salaries)])
       .sort(([, vA], [, vB]) => vB - vA)
   );
-  console.log('mapWordToMeanSalary HH', mapWordToMeanSalary);
+  // console.log('mapWordToMeanSalary HH', mapWordToMeanSalary);
 
   const data = Object.entries(mapWordToMeanSalary)
     .map(([word, meanSalary]) => [word, Math.round(meanSalary)].join(','))
@@ -418,7 +430,9 @@ const getTopWordsFromDescriptionBySalary = async (ctx) => {
 
   console.log('HH stat by count vacancy:', vacanciesFilteredHH.length);
 
-  await writeFile('word-by-salary.csv', data, { encoding: 'utf-8' });
+  await writeFile(`word-by-salary_by_N${vacanciesFilteredHH.length}.csv`, data, {
+    encoding: 'utf-8',
+  });
 };
 
 const getVacancy = async (ctx) => {

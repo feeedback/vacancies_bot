@@ -110,14 +110,12 @@ export const getTopWordsByCountFromVacanciesDataByFieldSalary = (vacancies, fiel
   const words = vacancies.flatMap((v) => _.words(v[field].toLowerCase(), reAsciiWord));
 
   const topWordsByCount = Object.fromEntries(
-    Object.entries(_.countBy(words)).sort(([, vA], [, vB]) => vB - vA)
+    Object.entries(_.countBy(words))
+      .sort(([, vA], [, vB]) => vB - vA)
+      .filter(([word, count]) => filterNotWord(word) && count >= 3)
   );
 
-  const setNotOnlyOneWords = new Set(
-    Object.entries(topWordsByCount)
-      .filter(([word, count]) => filterNotWord(word) && count >= 3)
-      .map(([w]) => w)
-  );
+  const setNotOnlyOneWords = new Set(Object.entries(topWordsByCount).map(([w]) => w));
 
   salaryAndWords.forEach(([avgUSD, wordsByThisVacancy]) =>
     _.uniq(wordsByThisVacancy).forEach((uniqWord) => {
