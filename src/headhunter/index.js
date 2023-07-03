@@ -50,6 +50,10 @@ const getVacanciesHeadHunter = async (
       ) =>
         // atB - atA || usdB - usdA
         usdB - usdA || atB - atA
+    )
+    .filter(
+      ({ salary: { avgUSD = 0 } }) =>
+        !addFilters['only_with_salary'] || (avgUSD && avgUSD >= minSalary && avgUSD <= maxSalary)
     );
   // .filter(({ salary: { avgUSD } }) => avgUSD > 0);
   const hashes = vacanciesFiltered.map(({ hashContent }) => hashContent);

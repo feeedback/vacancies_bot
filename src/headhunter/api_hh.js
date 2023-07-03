@@ -154,7 +154,7 @@ const requestVacanciesHeadHunter = async (
   const urlRawJSON = new URL(
     `${requestConfig.BASE_URL_JSON}?${qs.stringify(filter, { arrayFormat: 'repeat' })}`
   );
-  const keyCache = getHashByStr(urlRaw.toString());
+  const keyCache = `HH_REQUEST:${getHashByStr(urlRaw.toString())}`;
 
   if (await redisCache.exists(keyCache)) {
     const cachedVacanciesData = JSON.parse(await redisCache.get(keyCache)).map((vacancy) => ({
@@ -171,6 +171,7 @@ const requestVacanciesHeadHunter = async (
   let page = 0;
   let pageMax = Infinity;
   const vacancies = [];
+  let isUseCache = false;
 
   while (page < pageMax) {
     urlRaw.searchParams.set('page', page);
@@ -178,28 +179,35 @@ const requestVacanciesHeadHunter = async (
     urlRawJSON.searchParams.set('page', page);
     const urlJSON = urlRawJSON.toString();
 
+    const keyCacheByPage = `HH_PAGE:${getHashByStr(url.toString())}`;
+    const keyJSONCacheByPage = `HH_PAGE_JSON:${getHashByStr(urlJSON.toString())}`;
+
     let vacanciesData = null;
     console.log('--- --- ---> page', page + 1);
 
     try {
-      const res = await axios.get(url, { headers: requestConfig.headers });
-      const { vacanciesDataRaw, vacanciesCount } = await parseVacanciesFromDom(
-        res.data,
-        redisCache
-      );
-      const resJSON = await axios.get(urlJSON, { headers: requestConfig.headersJson });
-      // const res2 = await axios.get(url2, {});
+      let pageData = null;
 
-      const mapJsonDataByVacancyId = _.groupBy(
-        resJSON.data.vacancySearchResult.vacancies,
-        'vacancyId'
-      );
-      // console.log('mapJsonDataByVacancyId', mapJsonDataByVacancyId);
+      if (await redisCache.exists(keyCacheByPage)) {
+        isUseCache = true;
+        pageData = JSON.parse(await redisCache.get(keyCacheByPage));
+      } else {
+        isUseCache = false;
+        const res = await axios.get(url, { headers: requestConfig.headers });
+        pageData = await parseVacanciesFromDom(res.data, redisCache);
 
-      const vacanciesDataRawWithJSON = vacanciesDataRaw.map((v) => {
-        const rawJson = mapJsonDataByVacancyId[v.id][0];
+        redisCache.set(keyCacheByPage, JSON.stringify(pageData), 'EX', 60 * 60);
+      }
+      const { vacanciesDataRaw, vacanciesCount } = pageData;
 
-        return Object.assign(v, {
+      // JSON
+      let pageJSON = null;
+
+      if (await redisCache.exists(keyJSONCacheByPage)) {
+        pageJSON = JSON.parse(await redisCache.get(keyJSONCacheByPage));
+      } else {
+        const resJSON = await axios.get(urlJSON, { headers: requestConfig.headersJson });
+        pageJSON = resJSON.data.vacancySearchResult.vacancies.map((rawJson) => ({
           responsesCount: rawJson?.responsesCount || 0, // todo: понять чем различается с totalResponsesCount
           online_users_count: rawJson?.online_users_count || 0,
           creationTime: rawJson?.creationTime,
@@ -207,7 +215,21 @@ const requestVacanciesHeadHunter = async (
           publicationTimeUnix: rawJson?.publicationTime?.['@timestamp'],
           lastChangeTime: rawJson?.lastChangeTime?.$,
           lastChangeTimeUnix: rawJson?.lastChangeTime?.['@timestamp'],
-        });
+        }));
+
+        redisCache.set(keyJSONCacheByPage, JSON.stringify(pageJSON), 'EX', 60 * 60);
+      }
+
+      const mapJsonDataByVacancyId = _.groupBy(pageJSON, 'vacancyId');
+
+      const vacanciesDataRawWithJSON = vacanciesDataRaw.map((v) => {
+        if (!mapJsonDataByVacancyId[v.id]?.[0]) {
+          // console.log('not vacancy in JSON', v);
+          return v;
+        }
+        const json = mapJsonDataByVacancyId[v.id][0];
+
+        return Object.assign(v, json);
       });
       // console.log('vacanciesDataRaw2 :>> ', vacanciesDataRawWithJSON);
 
@@ -225,6 +247,7 @@ const requestVacanciesHeadHunter = async (
       if (vacanciesData.length === 0) {
         pageMax = 0;
       }
+      console.log({ page, pageMax, vacanciesCount });
     } catch (error) {
       console.log('error requestVacanciesHeadHunter', error);
       throw error;
@@ -232,10 +255,11 @@ const requestVacanciesHeadHunter = async (
 
     page += 1;
 
-    await delayMs(process.env.DELAY_INTERVAL_HH_REQUEST || 10_000);
+    // eslint-disable-next-line no-unused-expressions
+    !isUseCache && (await delayMs(process.env.DELAY_INTERVAL_HH_REQUEST || 10_000));
   }
 
-  redisCache.set(keyCache, JSON.stringify(vacancies), 'EX', isStartDay ? 60 * 60 * 2 : 60 * 5); // 2 hour // 5 min
+  redisCache.set(keyCache, JSON.stringify(vacancies), 'EX', isStartDay ? 60 * 60 * 2 : 60 * 30); // 2 hour // 5 min
 
   return { vacanciesData: vacancies };
 };

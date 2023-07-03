@@ -5,3 +5,5 @@ coverage
 .idea
 # /data/
 .env
+*.csv
+*.html

@@ -7,6 +7,7 @@ import _ from 'lodash';
 import dayjs from 'dayjs';
 import { markdownEscapes } from 'markdown-escapes';
 import Redis from 'ioredis';
+import { writeFile } from 'fs/promises';
 import getVacanciesHabrCareer from '../habr_career/index.js';
 import getVacanciesHeadHunter from '../headhunter/index.js';
 import { botStartMessage, commandDescription, initStateUsers } from './settings.js';
@@ -14,10 +15,12 @@ import {
   nowMsDate,
   chunkTextBlocksBySizeByte,
   delayMs,
-  getTopWordsByCountFromVacanciesDataByField,
+  // getTopWordsByCountFromVacanciesDataByField,
+  getTopWordsByCountFromVacanciesDataByFieldSalary,
 } from '../utils/utils.js';
 import { getStringifyVacancies as getStringifyVacanciesHabrCareer } from '../habr_career/api_habr_career.js';
 import { getStringifyVacancies as getStringifyVacanciesHH } from '../headhunter/api_hh.js';
+// import { filterNotWord } from '../utils/words.js';
 
 dotenv.config();
 
@@ -296,18 +299,25 @@ const getVacanciesFromSources = async (
 ) => {
   console.log('\n', nowMsDate(), getVacanciesFromSources);
 
-  const { vacanciesFiltered: vacanciesFilteredHC, hashes: hashesHC } = await getVacanciesHabrCareer(
-    rssLinks,
-    lastDays,
-    userState.excludeTags,
-    userState.excludeWords,
-    redisStore,
-    minSalary,
-    maxSalary,
-    addFiltersHH
-  );
+  const vacanciesFilteredHC = [];
+  const hashesHC = [];
 
-  console.log('фильтрованные вакансии Habr.career', vacanciesFilteredHC.length);
+  if (source !== 'HH') {
+    const { vacanciesFiltered, hashes } = await getVacanciesHabrCareer(
+      rssLinks,
+      lastDays,
+      userState.excludeTags,
+      userState.excludeWords,
+      redisStore,
+      minSalary,
+      maxSalary
+    );
+
+    console.log('фильтрованные вакансии Habr.career', vacanciesFiltered.length);
+
+    vacanciesFilteredHC.push(...vacanciesFiltered);
+    hashesHC.push(...hashes);
+  }
 
   const vacanciesFilteredHH = [];
   const hashesHH = [];
@@ -318,10 +328,12 @@ const getVacanciesFromSources = async (
       userState.HH.words,
       redisStore,
       minSalary,
-      maxSalary
+      maxSalary,
+      addFiltersHH
     );
 
     console.log('фильтрованные вакансии HeadHunter', vacanciesFiltered.length);
+
     vacanciesFilteredHH.push(...vacanciesFiltered);
     hashesHH.push(...hashes);
   }
@@ -355,121 +367,58 @@ const getTopWordsFromDescriptionBySalary = async (ctx) => {
     .unix();
   console.log('\n', nowMsDate(), getTopWordsFromDescriptionBySalary, { day, source });
 
-  const { vacanciesFilteredHC, vacanciesFilteredHH } = await getVacanciesFromSources(
+  // const { vacanciesFilteredHC, vacanciesFilteredHH } = await getVacanciesFromSources(
+  const { vacanciesFilteredHH } = await getVacanciesFromSources(
     day,
     dayUnix,
     rssLinks,
     userState,
-    'ALL',
+    'HH',
     1,
     2_000_000,
-    { isSalary: 1 }
+    // { only_with_salary: true, salary: 50000 }
+    { only_with_salary: true }
   );
 
-  const BLACK_FILTER_WORDS = new Set([
-    'в',
-    'до',
-    'из,за',
-    'за',
-    'к',
-    'над',
-    'под',
-    'перед',
-    'у',
-    'через',
-    'возле',
-    'мимо',
-    'около',
-    'по',
-    'после',
-    'от',
-    'ради',
-    'благодаря',
-    'ввиду',
-    'вследствие',
-    'для',
-    'на',
-    'о',
-    'об',
-    'обо',
-    'про',
-    'насчет',
-    'вопреки',
-    'с',
-    'вроде',
-    'наподобие',
-    'что',
-    'чтобы',
-    'дабы',
-    'как',
-    'когда',
-    'коли',
-    'ежели',
-    'раз',
-    'ибо',
-    'поэтому',
-    'пускай',
-    'хотя',
-    'пока',
-    'подобно',
-    'лишь',
-    'едва',
-    'точно',
-    'будто',
-    'словно',
-    'если',
-    'кто',
-    'который',
-    'какой',
-    'где',
-    'куда',
-    'откуда',
-    'и',
-    'да',
-    'ни',
-    'тоже',
-    'также',
-    'или',
-    'либо',
-    'то',
-    'а',
-    'но',
-    'зато',
-    'однако',
-    'есть',
-    'именно',
-    'из',
-    'со',
-    'не',
-    'and',
-    'no',
-    'not',
-  ]);
-
-  const topWordsByCountByFilteredHC = getTopWordsByCountFromVacanciesDataByField(
-    vacanciesFilteredHC,
-    'text'
-  );
-  const topWordsHC = Object.entries(topWordsByCountByFilteredHC)
-    .filter(([word, count]) => word.length >= 2 && count >= 2)
-    .filter(([word]) => !BLACK_FILTER_WORDS.has(word))
-    // .map(([word]) => word);
-    .slice(0, 100);
-  console.log('topWords Habr.Career', topWordsHC);
+  // const {
+  //   mapWordToSalariesPoints: mapWordToSalariesPointsHC,
+  //   topWordsByCount: topWordsByCountByFilteredHC,
+  // } = getTopWordsByCountFromVacanciesDataByFieldSalary(vacanciesFilteredHC, 'text');
+  // const topWordsHC = Object.entries(topWordsByCountByFilteredHC)
+  //   .filter(([word, count]) => word.length >= 2 && count >= 3)
+  //   .filter(([word]) => filterNotWord(word))
+  //   // .map(([word]) => word);
+  //   .slice(0, 10);
+  // console.log('topWords Habr.Career', topWordsHC);
+  // console.log('mapWordToSalariesPoints Habr.Career', mapWordToSalariesPointsHC);
 
   //
-  const topWordsByCountByFilteredHH = getTopWordsByCountFromVacanciesDataByField(
-    vacanciesFilteredHH,
-    'text'
+  const {
+    mapWordToSalariesPoints: mapWordToSalariesPointsHH,
+    // topWordsByCount: topWordsByCountByFilteredHH,
+  } = getTopWordsByCountFromVacanciesDataByFieldSalary(vacanciesFilteredHH, 'text');
+  // const topWordsHH = Object.entries(topWordsByCountByFilteredHH)
+  //   .filter(([word, count]) => word.length >= 2 && count >= 3)
+  //   .filter(([word]) => filterNotWord(word))
+  //   .slice(0, 10);
+
+  // console.log('topWords HH', topWordsHH.slice(0, 10));
+  // console.log('mapWordToSalariesPoints HH', mapWordToSalariesPointsHH);
+
+  const mapWordToMeanSalary = Object.fromEntries(
+    Object.entries(mapWordToSalariesPointsHH)
+      .map(([word, salaries]) => [word, _.mean(salaries)])
+      .sort(([, vA], [, vB]) => vB - vA)
   );
-  const topWordsHH = Object.entries(topWordsByCountByFilteredHH)
-    .filter(([word, count]) => word.length >= 2 && count >= 2)
-    .filter(([word]) => !BLACK_FILTER_WORDS.has(word))
-    // .map(([word]) => word);
-    .slice(0, 300);
-  console.log('topWords HH', topWordsHH.slice(0, 100));
-  console.log('topWords HH', topWordsHH.slice(100, 200));
-  console.log('topWords HH', topWordsHH.slice(200, 300));
+  console.log('mapWordToMeanSalary HH', mapWordToMeanSalary);
+
+  const data = Object.entries(mapWordToMeanSalary)
+    .map(([word, meanSalary]) => [word, Math.round(meanSalary)].join(','))
+    .join('\n');
+
+  console.log('HH stat by count vacancy:', vacanciesFilteredHH.length);
+
+  await writeFile('word-by-salary.csv', data, { encoding: 'utf-8' });
 };
 
 const getVacancy = async (ctx) => {
@@ -825,7 +774,7 @@ export const getHandlers = async (
         await getVacancy(ctx);
       },
       topwords: async (ctx) => {
-        await getTopWordsFromDescriptionBySalary(ctx);
+        getTopWordsFromDescriptionBySalary(ctx).catch((err) => console.log(err));
       },
       sub: async (ctx) => {
         const userId = ctx.update.message.from.id;

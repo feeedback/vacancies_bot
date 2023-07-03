@@ -7,6 +7,7 @@ import stringSimilarity from 'string-similarity';
 import path from 'path';
 // import crypto from 'crypto';
 import dayjs from 'dayjs';
+import { filterNotWord, reAsciiWord } from './words.js';
 
 const cyrb53 = (key, seed = 0) => {
   // fastest and simple string hash function (10^9 hashes => zero collision)
@@ -95,4 +96,39 @@ export const getTopWordsByCountFromVacanciesDataByField = (vacancies, field) => 
     Object.entries(_.countBy(wordsVacancies)).sort(([, vA], [, vB]) => vB - vA)
   );
   return topWordsByCount;
+};
+
+export const getTopWordsByCountFromVacanciesDataByFieldSalary = (vacancies, field) => {
+  const salaryAndWords = vacancies.map((v) => [
+    v.salary.avgUSD,
+    _.words(v[field].toLowerCase(), reAsciiWord),
+  ]);
+
+  const mapWordToSalariesPoints = {};
+
+  // теряем частоту слов в одной вакансии, потом допилить
+  const words = vacancies.flatMap((v) => _.words(v[field].toLowerCase(), reAsciiWord));
+
+  const topWordsByCount = Object.fromEntries(
+    Object.entries(_.countBy(words)).sort(([, vA], [, vB]) => vB - vA)
+  );
+
+  const setNotOnlyOneWords = new Set(
+    Object.entries(topWordsByCount)
+      .filter(([word, count]) => filterNotWord(word) && count >= 3)
+      .map(([w]) => w)
+  );
+
+  salaryAndWords.forEach(([avgUSD, wordsByThisVacancy]) =>
+    _.uniq(wordsByThisVacancy).forEach((uniqWord) => {
+      if (setNotOnlyOneWords.has(uniqWord)) {
+        if (!mapWordToSalariesPoints[uniqWord]) {
+          mapWordToSalariesPoints[uniqWord] = [];
+        }
+        mapWordToSalariesPoints[uniqWord].push(avgUSD);
+      }
+    })
+  );
+
+  return { mapWordToSalariesPoints, topWordsByCount };
 };

@@ -56,9 +56,11 @@ export const parseSalaryFromTitleHH = (
 export const parseVacanciesFromDom = async (data, redisCache) => {
   const document = getDOMDocument(data);
 
-  let vacanciesCount = Number(
-    document.querySelector(`h1[data-qa^=bloko-header]`).childNodes[0].textContent
-  );
+  const rawCount = document.querySelector(`h1[data-qa^=bloko-header]`);
+  if (!rawCount) {
+    console.log(rawCount, document);
+  }
+  let vacanciesCount = Number(rawCount.childNodes[0].textContent.replaceAll(/\s/g, ''));
   // eslint-disable-next-line no-restricted-globals
   if (isNaN(vacanciesCount)) {
     vacanciesCount = 0;
