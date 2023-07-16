@@ -55,7 +55,7 @@ export const getVacancyByFilterFromRssHabrCareer = async (
     } else {
       feed = await rss.parseURL(urlRss.toString());
 
-      redisCache.set(
+      await redisCache.set(
         keyCache,
         JSON.stringify(feed),
         'EX',

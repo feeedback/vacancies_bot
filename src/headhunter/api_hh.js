@@ -196,7 +196,7 @@ const requestVacanciesHeadHunter = async (
         const res = await axios.get(url, { headers: requestConfig.headers });
         pageData = await parseVacanciesFromDom(res.data, redisCache);
 
-        redisCache.set(keyCacheByPage, JSON.stringify(pageData), 'EX', 60 * 60);
+        await redisCache.set(keyCacheByPage, JSON.stringify(pageData), 'EX', 60 * 60);
       }
       const { vacanciesDataRaw, vacanciesCount } = pageData;
 
@@ -218,7 +218,7 @@ const requestVacanciesHeadHunter = async (
           lastChangeTimeUnix: rawJson?.lastChangeTime?.['@timestamp'],
         }));
 
-        redisCache.set(keyJSONCacheByPage, JSON.stringify(pageJSON), 'EX', 60 * 60);
+        await redisCache.set(keyJSONCacheByPage, JSON.stringify(pageJSON), 'EX', 60 * 60);
       }
 
       const mapJsonDataByVacancyId = _.groupBy(pageJSON, 'vacancyId');
@@ -261,7 +261,12 @@ const requestVacanciesHeadHunter = async (
     !isUseCache && (await delayMs(process.env.DELAY_INTERVAL_HH_REQUEST || 10_000));
   }
 
-  redisCache.set(keyCache, JSON.stringify(vacancies), 'EX', isStartDay ? 60 * 60 * 2 : 60 * 30); // 2 hour // 5 min
+  await redisCache.set(
+    keyCache,
+    JSON.stringify(vacancies),
+    'EX',
+    isStartDay ? 60 * 60 * 2 : 60 * 30
+  ); // 2 hour // 5 min
 
   return { vacanciesData: vacancies };
 };

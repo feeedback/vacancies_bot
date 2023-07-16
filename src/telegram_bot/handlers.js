@@ -262,7 +262,7 @@ const checkUserPreparedForSearchVacancies = async (
       console.log(error.response);
 
       delete mapUserIdToState[userId];
-      redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
+      await redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
     }
   }
 
@@ -489,7 +489,7 @@ const getVacancy = async (ctx) => {
     if (error.response && error.response.statusCode === 403) {
       console.log(error.response);
       delete mapUserIdToState[userId];
-      redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
+      await redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
     }
   }
   // const tempMessageId = ctx.message.message_id + 1;
@@ -563,7 +563,7 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
     if (error.response && error.response.statusCode === 403) {
       console.log(error.response);
       delete mapUserIdToState[userId];
-      redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
+      await redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
     }
   }
 
@@ -667,7 +667,7 @@ export const getHandlers = async (
         if (error.response && error.response.statusCode === 403) {
           console.log(error.response);
           delete mapUserIdToState[userId];
-          redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
+          await redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
         }
       }
     },
@@ -682,7 +682,7 @@ export const getHandlers = async (
         if (error.response && error.response.statusCode === 403) {
           console.log(error.response);
           delete mapUserIdToState[userId];
-          redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
+          await redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
         }
       }
     },
@@ -703,7 +703,7 @@ export const getHandlers = async (
         if (error.response && error.response.statusCode === 403) {
           console.log(error.response);
           delete mapUserIdToState[userId];
-          redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
+          await redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
         }
       }
     },

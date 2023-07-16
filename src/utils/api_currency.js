@@ -1,16 +1,20 @@
-// import fs from 'fs';
 import axios from 'axios';
-// import _ from 'lodash';
 import currencyFormatter from 'currency-formatter';
-// import dayjs from 'dayjs';
-import LRU from 'lru-cache';
-
+import Redis from 'ioredis';
+import dotenv from 'dotenv';
 import currencySymbols from './currency_symbols.js';
 
-const cache = new LRU({
-  max: 1,
-  maxAge: 1000 * 60 * 60 * 12, // 12 hours
+dotenv.config();
+
+export const redisStore = new Redis({
+  port: process.env.REDIS_PORT,
+  host: process.env.REDIS_HOST,
+  family: 4, // 4 (IPv4) or 6 (IPv6)
+  password: process.env.REDIS_PASS,
+  db: 0,
+  // maxRetriesPerRequest: 1,
 });
+
 export const mapCurrencyCodeToSymbol = Object.fromEntries(
   currencySymbols.map(({ symbol, code }) => [code, symbol])
 );
@@ -19,32 +23,37 @@ export const mapSymbolToCurrencyCode = Object.fromEntries(
 );
 
 export const getCurrencyRates = async (isTest = false) => {
-  const ratesFallback = { RUB: 80, USD: 1 };
+  const ratesFallback = { RUB: 90, USD: 1 };
+  let rates = ratesFallback;
 
   if (isTest) {
-    return ratesFallback;
-  }
-  if (cache.has('rates')) {
-    return cache.get('rates');
+    return rates;
   }
 
   try {
-    const res = await axios.get('http://data.fixer.io/api/latest', {
-      params: { access_key: process.env.FIXER_API_KEY },
-    });
-    // const { rates, timestamp, date } = res.data;
-    const { rates } = res.data;
-    // cache.set(`rates ${date}`, rates);
-    cache.set('rates', rates);
+    if (await redisStore.get('rates:rates')) {
+      const ratesFromCache = JSON.parse(await redisStore.get('rates:rates'));
+      rates = ratesFromCache;
+    } else {
+      const res = await axios.get('http://data.fixer.io/api/latest', {
+        params: { access_key: process.env.FIXER_API_KEY },
+      });
+      const { rates: ratesNew } = res.data;
 
-    console.log('\nrates USD->RUB', rates.RUB / rates.USD);
-
-    // return { rates, timestamp, date };
-    return rates;
+      if (!ratesNew) {
+        console.log('error getCurrencyRates data null', res.data);
+      } else {
+        await redisStore.set('rates:rates', JSON.stringify(ratesNew), 'EX', 60 * 60 * 24); // 1 day
+        rates = ratesNew;
+      }
+    }
   } catch (error) {
     console.log('error getCurrencyRates', error);
-    return ratesFallback;
   }
+
+  console.log('\nrates USD->RUB', rates.RUB / rates.USD);
+
+  return rates;
 };
 
 export const convertCurrencyToBase = (rates, base = 'RUB') => {

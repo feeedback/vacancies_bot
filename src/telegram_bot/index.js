@@ -37,25 +37,25 @@ const bot = new Telegraf(process.env.TELEGRAM_BOT_API, { handlerTimeout: 5 * 60 
   bot.on('poll_answer', handlers.onEvent.poll_answer);
   bot.launch();
 
-  process.once('SIGINT', () => {
+  process.once('SIGINT', async () => {
     unsubAll();
     bot.stop('SIGINT');
-    redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
-    redisStore.quit();
+    await redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
+    await redisStore.quit();
     console.log('SIGINT');
   });
-  process.once('SIGTERM', () => {
+  process.once('SIGTERM', async () => {
     unsubAll();
     bot.stop('SIGTERM');
-    redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
-    redisStore.quit();
+    await redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
+    await redisStore.quit();
     console.log('SIGTERM');
   });
   // process.on('exit', () => {
   //   unsubAll();
   //   bot.stop('SIGTERM');
-  //   redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
-  //   redisStore.quit();
+  //   await redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
+  //   await redisStore.quit();
 
   //   console.log('exit');
   //   process.exit(0);
