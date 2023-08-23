@@ -42,6 +42,7 @@ export const excludeWordTitle = [
   'Jira',
   'Ruby',
   'Менеджер',
+  'Shopify',
   'Маркетолог',
   'Python',
   'Angular*',
@@ -142,7 +143,7 @@ export const excludeWordDesc = [
   '"1С-Битрикс"',
   '"Qlikview"',
   '"Symfony"',
-  '"PHP"',
+  // '"PHP"',
   '"django"',
   // '"jQuery"',
   // '"React Native"',
@@ -151,6 +152,7 @@ export const excludeWordDesc = [
 
 export const includeWordDesc = [
   // 'js',
+  '"TS"',
   'typescript*',
   'javascript*',
   'node*',

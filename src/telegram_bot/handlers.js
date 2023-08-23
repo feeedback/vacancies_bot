@@ -294,7 +294,7 @@ const getVacanciesFromSources = async (
   userState,
   source = 'ALL',
   minSalary = 100_000,
-  maxSalary = 700_000,
+  maxSalary = 1_000_000,
   addFiltersHH = {}
 ) => {
   console.log('\n', nowMsDate(), getVacanciesFromSources);

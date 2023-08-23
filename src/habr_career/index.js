@@ -16,7 +16,7 @@ const getVacanciesHabrCareer = async (
   vacancyExcludeWordsInDesc = vacancyExcludeWordsInDescMy,
   cache,
   minSalary = 100_000,
-  maxSalary = 700_000
+  maxSalary = 1_000_000
 ) => {
   const logT = Date.now();
   let vacanciesRaw = [];
