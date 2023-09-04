@@ -22,7 +22,7 @@ const getStringifyVacancy = ({
   link = '',
   salary,
   company = '',
-  // schedule = '',
+  schedule = false,
   publicationTimeUnix = '',
   lastChangeTimeUnix = '',
   responsesCount = 0,
@@ -47,11 +47,12 @@ const getStringifyVacancy = ({
     ? `_${cityR}_`
     : linkByCity.map(([c, l]) => `[${c.replace(/[_$*]/g, '-')}](${l})`).join('; ');
   const counts = online ? `✉️${responsesCount} 👀${online}` : `✉️${responsesCount}`;
+  const scheduleR = schedule ? '; _or from_ 🏠' : ''; // 🏠👨‍💻 // ' _Можно удалённо_.'
   // const scheduleR = schedule.replace(/[_$*]/g, '-');
 
   // return `${salaryOut} | ${ago} | «${companyR}» | *«${titleR}»* | ${tasksR} ${skillsR} | _${cityR}. ${scheduleR}_ ► ${linkB}`;
   // return `${salaryOut} | ${agoStr} |${counts}| «${companyR}» | *«${titleR}»* | ${tasksR} ${skillsR} | _${cityR}._ ► ${linkB}`;
-  return `${salaryOut} | ${agoStr} |${counts}| «${companyR}» | *«${titleR}»* | ${tasksR} ${skillsR} | ${cityWithLinks}. ► ${linkB}`;
+  return `${salaryOut} | ${agoStr} |${counts}| «${companyR}» | *«${titleR}»* | ${tasksR} ${skillsR} | ${cityWithLinks}${scheduleR} ► ${linkB}`;
 };
 
 export const getStringifyVacancies = (vacanciesFiltered) =>
@@ -92,8 +93,8 @@ const createFilterSearch = (
 
 const formatFilterSort = (
   vacanciesRaw,
+  rates,
   baseCurrency = 'RUB',
-  rates = { RUB: 80, USD: 1 },
   minSalary = 0,
   maxSalary = Infinity
 ) => {
@@ -102,14 +103,12 @@ const formatFilterSort = (
       let salary = { isSalaryDefine: false, avg: null, avgUSD: null, fork: null, forkUSD: null };
 
       if (vacancy.salaryStr) {
-        salary = parseSalaryFromTitleHH(vacancy.salaryStr, baseCurrency, rates);
+        salary = parseSalaryFromTitleHH(vacancy.salaryStr, rates, baseCurrency);
       }
 
       return { ...vacancy, salary };
     })
     .filter(
-      // ({ schedule, salary: { avg, isSalaryDefine } }) =>
-      // schedule !== 'Можно удалённо.' &&
       ({ salary: { avg, isSalaryDefine } }) =>
         !isSalaryDefine || (avg >= minSalary && avg <= maxSalary)
     )
@@ -239,8 +238,8 @@ const requestVacanciesHeadHunter = async (
 
       vacanciesData = formatFilterSort(
         vacanciesDataRawWithJSON,
-        'RUB',
         rates,
+        'RUB',
         minSalary,
         maxSalary
       );

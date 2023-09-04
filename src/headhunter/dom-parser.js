@@ -20,11 +20,7 @@ const getDOMDocument = (data) => new jsdom.JSDOM(data).window.document;
 
 const BASE_VACANCY_LINK = 'https://hh.ru/vacancy';
 
-export const parseSalaryFromTitleHH = (
-  stringTitleVacancy,
-  baseCurrency = 'RUB',
-  rates = { RUB: 80, USD: 1 }
-) => {
+export const parseSalaryFromTitleHH = (stringTitleVacancy, rates, baseCurrency = 'RUB') => {
   // const regExpPatternSalary = /(?:(?:^(?:от)\s*(?:(\d[\s\d]*\d)+))|(?:^(?:до)\s*(?:(\d[\s\d]*\d)+))|(?:^(?:(\d[\s\d]*\d)+)\s[−‐‑-ꟷー一]\s(?:(\d[\s\d]*\d)+)))(?: (.+)$)/i;
   const regExpPatternSalary = /(?:(?:^(?:от)\s*(?:(\d[\s\d]*\d)+))|(?:^(?:до)\s*(?:(\d[\s\d]*\d)+))|(?:^(?:(\d[\s\d]*\d)+)\s*.?\s*(?:(\d[\s\d]*\d)+)))(?: (.+)$)/i;
   const mapCurrencyStrToSymbol = {
@@ -57,7 +53,7 @@ export const parseVacanciesFromDom = async (data, redisCache) => {
   const document = getDOMDocument(data);
 
   const rawCount = document.querySelector(`h1[data-qa^=bloko-header]`);
-  if (!rawCount) {
+  if (!rawCount || !rawCount.childNodes) {
     console.log(rawCount, document);
   }
   let vacanciesCount = Number(rawCount.childNodes[0].textContent.replaceAll(/\s/g, ''));
@@ -77,53 +73,51 @@ export const parseVacanciesFromDom = async (data, redisCache) => {
   const vacanciesDataRaw = [];
   for (const vacancy of vacanciesEl) {
     // console.log('vacancy', '№:', i);
-    const getElByAttr = (attr, ...restArgs) => getChildTextByDataAttr(vacancy, attr, ...restArgs);
+    const getElTextByAttr = (attr, ...restArgs) =>
+      getChildTextByDataAttr(vacancy, attr, ...restArgs);
 
-    const tasks = getElByAttr('vacancy-serp__vacancy_snippet_responsibility').replace(
+    const tasks = getElTextByAttr('vacancy-serp__vacancy_snippet_responsibility').replace(
       /<\/?highlighttext>/gi,
       ''
     );
-    const skills = getElByAttr('vacancy-serp__vacancy_snippet_requirement').replace(
+    const skills = getElTextByAttr('vacancy-serp__vacancy_snippet_requirement').replace(
       /<\/?highlighttext>/gi,
       ''
     );
-    const title = getElByAttr('serp-item__title');
+    const title = getElTextByAttr('serp-item__title');
 
-    const idFromLink = getElByAttr('serp-item__title', '', false)
+    const idFromLink = getElTextByAttr('serp-item__title', '', false)
       .href.split('?')?.[0]
       ?.split('vacancy/')?.[1];
     const idFromButton = new URL(
-      `https://hh.ru${getElByAttr('vacancy-serp__vacancy_response', '', false)?.href}`
+      `https://hh.ru${getElTextByAttr('vacancy-serp__vacancy_response', '', false)?.href}`
     )?.searchParams?.get('vacancyId');
 
     const id = idFromLink || idFromButton;
     const link = `${BASE_VACANCY_LINK}/${id}`;
 
-    const salaryStr = getElByAttr('vacancy-serp__vacancy-compensation');
+    const salaryStr = getElTextByAttr('vacancy-serp__vacancy-compensation');
 
-    // const scheduleRaw = getElByAttr('vacancy-serp__vacancy-work-schedule');
-    // const schedule = scheduleRaw === 'Можно работать из дома' ? 'Можно удалённо.' : scheduleRaw;
-    const schedule = '';
+    const scheduleRaw =
+      getElTextByAttr('vacancy-serp__vacancy-work-schedule') ||
+      getElTextByAttr('vacancy-label-remote-work-schedule') ||
+      '';
 
-    const company = getElByAttr('vacancy-serp__vacancy-employer');
-    const address = getElByAttr('vacancy-serp__vacancy-address');
+    // eslint-disable-next-line no-irregular-whitespace
+    // const schedule = ['Можно работать из дома', 'Можно из дома', 'Можно из дома'].includes(scheduleRaw);
+    const schedule = scheduleRaw.includes('дома');
+
+    const company = getElTextByAttr('vacancy-serp__vacancy-employer');
+    const address = getElTextByAttr('vacancy-serp__vacancy-address');
     const city = address.split(',')[0];
 
-    //  const dateMonthDay =
-    //    getElByAttr('vacancy-serp__vacancy-date', '.vacancy-serp-item__publication-date_short') ||
-    //    dayjs().format('DD-MM');
     const content = [title, company, salaryStr, tasks, skills, schedule].join('\n');
     const text = [title, company, tasks, skills].join('\n');
 
-    // const bumpedAt = dayjs.utc(dateMonthDay, 'DD-MM').unix();
-    // const bumpedAgo = dayjs().to(dayjs.unix(bumpedAt));
     const hashContent = getHashByStr(content);
 
     const cachedCreatedAt = await redisCache.get(`HH:vacancyCreatedAt:${hashContent}`);
-    // const createdAt =
-    //   cachedCreatedAt ?? dayjs(bumpedAt).isBefore(dayjs().subtract(1, 'day'))
-    //     ? bumpedAt
-    //     : dayjs().unix();
+
     const createdAt = cachedCreatedAt ?? dayjs().unix();
     const ago = dayjs.unix(+createdAt).fromNow();
 

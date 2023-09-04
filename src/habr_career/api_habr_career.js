@@ -24,8 +24,8 @@ const HABR_CAREER_URL_RSS = `${HABR_CAREER_BASE_URL}/vacancies/rss`;
 
 export const getVacancyByFilterFromRssHabrCareer = async (
   filterParam,
-  fromDayAgo = 14,
-  redisCache
+  redisCache,
+  fromDayAgo = 14
 ) => {
   console.log('getVacancyByFilterFromRssHabrCareer', { fromDayAgo });
 
@@ -109,8 +109,8 @@ const parseSalaryFromTitleHabr = (stringTitleVacancy, baseCurrency, rates) => {
 
 export const parseFilterFormatVacancies = async (
   vacanciesRaw,
-  baseCurrency = 'RUB',
   rates,
+  baseCurrency = 'RUB',
   vacancyExcludeTags,
   vacancyExcludeWordsInDesc,
   maxCountIncludesBadTag = 0,

@@ -1,6 +1,6 @@
 export default {
   // salary: 120000,
-  schedule: ['remote'],
+  // schedule: ['remote'],
   // area: '1342', // Тюм. область
   // area: '1', // Москва
   // area: '2', // СПб

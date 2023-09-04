@@ -12,8 +12,8 @@ import { getTopWordsByCountFromVacanciesDataByField } from '../utils/utils.js';
 const getVacanciesHabrCareer = async (
   url,
   day = 2,
-  vacancyExcludeTags = vacancyExcludeTagsMy,
-  vacancyExcludeWordsInDesc = vacancyExcludeWordsInDescMy,
+  vacancyExcludeTags = vacancyExcludeTagsMy || [],
+  vacancyExcludeWordsInDesc = vacancyExcludeWordsInDescMy || [],
   cache,
   minSalary = 100_000,
   maxSalary = 1_000_000
@@ -24,19 +24,19 @@ const getVacanciesHabrCareer = async (
   if (Array.isArray(url)) {
     const rawHabr = [];
     for (const urlOne of url) {
-      rawHabr.push(...(await getVacancyByFilterFromRssHabrCareer(urlOne, day, cache)));
+      rawHabr.push(...(await getVacancyByFilterFromRssHabrCareer(urlOne, cache, day)));
     }
     vacanciesRaw = _.uniqBy(rawHabr, 'guid');
   } else {
-    vacanciesRaw = await getVacancyByFilterFromRssHabrCareer(url, day, cache);
+    vacanciesRaw = await getVacancyByFilterFromRssHabrCareer(url, cache, day);
   }
 
   const rates = await getCurrencyRates();
 
   const { vacanciesFiltered: vacanciesFilteredRaw, vacancies } = await parseFilterFormatVacancies(
     vacanciesRaw,
-    'RUB',
     rates,
+    'RUB',
     vacancyExcludeTags,
     vacancyExcludeWordsInDesc,
     0,
@@ -45,7 +45,6 @@ const getVacanciesHabrCareer = async (
     maxSalary
   );
   const vacanciesFiltered = vacanciesFilteredRaw;
-  // .filter(({ salary: { avgUSD } }) => avgUSD > 0);
 
   const topTagsByCount = getTopTagsByCount(vacancies);
   const topTagsByCountByFiltered = getTopTagsByCount(vacanciesFiltered);
