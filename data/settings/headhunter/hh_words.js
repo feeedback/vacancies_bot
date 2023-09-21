@@ -1,7 +1,10 @@
 export const excludeWordTitle = [
-  // high level
+  // levels
   // 'senior',
   // 'сеньор',
+  'Стажёр',
+  'Стажер',
+  'Ученик',
   'руководитель',
   '"Team Lead"',
   'Тимлид',
@@ -117,8 +120,11 @@ export const excludeWordTitle = [
   'Преподаватель*',
   'Автор*',
   'Ассистент*',
+  'Assistant*',
+  'Master',
   'Language*',
   'ABAP*',
+  'Product',
   'Куратор',
   'Oracle',
   'Magento',
