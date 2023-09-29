@@ -52,5 +52,6 @@ export const initStateUsers = {
     excludeTags: [...vacancyExcludeTagsMy],
     excludeWords: [...vacancyExcludeWordsInDescMy],
     HH: { filter: HHmyFilter, words: HHmyFiltersWords },
+    isSub: true,
   },
 };

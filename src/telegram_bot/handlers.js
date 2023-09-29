@@ -633,7 +633,8 @@ export const getHandlers = async (
           }
         }
       } catch (error) {
-        await redisStore.del('mapUserIdToState');
+        console.log(error);
+        // await redisStore.del('mapUserIdToState');
       }
     }
   })();
