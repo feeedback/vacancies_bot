@@ -1,0 +1,44 @@
+version: '3.4'
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: "npm run run"
+    networks:
+      - network_node
+    ports:
+      - 80:80
+    restart: always
+    environment:    
+      NODE_ENV: production
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: H4skse3ogBePKE3oGrLwpK
+    depends_on:
+      - redis
+
+  redis:
+    container_name: redis-server
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - 6379:6379
+    command: redis-server --save 600 1  --loglevel verbose --requirepass H4skse3ogBePKE3oGrLwpK
+    # volumes:
+    #   - ./redis:/data:rw
+    networks:
+      - network_node
+    mem_limit: '512M'
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-a', 'H4skse3ogBePKE3oGrLwpK', 'PING']
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  network_node:
+    driver: bridge
+    name: network_node
