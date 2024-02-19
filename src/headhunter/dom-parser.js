@@ -72,7 +72,7 @@ export const parseVacanciesFromDom = async (data, redisCache) => {
 
   const vacanciesDataRaw = [];
   for (const vacancy of vacanciesEl) {
-    // console.log('vacancy', '№:', i);
+    // console.log('vacancy', JSON.stringify(vacancy));
     const getElTextByAttr = (attr, ...restArgs) =>
       getChildTextByDataAttr(vacancy, attr, ...restArgs);
 
@@ -86,7 +86,7 @@ export const parseVacanciesFromDom = async (data, redisCache) => {
     );
     const title = getElTextByAttr('serp-item__title');
 
-    const idFromLink = getElTextByAttr('serp-item__title', '', false)
+    const idFromLink = getElTextByAttr('serp-item__title', '', false).parentElement
       .href.split('?')?.[0]
       ?.split('vacancy/')?.[1];
     const idFromButton = new URL(

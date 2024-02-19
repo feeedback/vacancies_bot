@@ -786,44 +786,52 @@ export const getHandlers = async (
       },
 
       get: async (ctx) => {
-        await getVacancy(ctx);
+        try {
+          await getVacancy(ctx);
+        } catch (error) {
+          console.log('get() | ERROR', error);
+        }
       },
       topwords: async (ctx) => {
         getTopWordsFromDescriptionBySalary(ctx).catch((err) => console.log(err));
       },
       sub: async (ctx) => {
-        const userId = ctx.update.message.from.id;
-        const chatId = ctx.update.message.chat.id;
-        if (!mapUserIdToState[userId]?.isStarted) {
-          startingUserState(userId);
+        try {
+          const userId = ctx.update.message.from.id;
+          const chatId = ctx.update.message.chat.id;
+          if (!mapUserIdToState[userId]?.isStarted) {
+            startingUserState(userId);
+          }
+          ctx.telegram.sendChatAction(chatId, 'typing');
+
+          if (!mapUserIdToState[userId].rss) {
+            await ctx.replyWithMarkdown('RSS not found! Please add that with */rss* [link]');
+            console.log('user id', userId, 'not found rss');
+            return;
+          }
+
+          if (mapUserIdToState[userId].isSub) {
+            await ctx.replyWithMarkdown('Вы *уже подписаны*!\nОтписаться можно командой */unsub*');
+            console.log('user id', userId, 'sub fail - yet sub');
+            return;
+          }
+
+          await ctx.replyWithMarkdown(
+            'Вы успешно *подписаны* на уведомления о новых вакансий!\nОтписаться можно командой */unsub*'
+          );
+          console.log('user id', userId, 'sub success');
+          mapUserIdToState[userId].isSub = true;
+
+          const newIntervalId = setInterval(async () => {
+            await getVacancySub(bot, chatId, userId, false, INTERVAL_POLL_SUB_MS);
+          }, INTERVAL_POLL_SUB_MS);
+
+          mapUserIdToState[userId].subIntervalId.push(Number(newIntervalId)); // раз в 5 минуту
+
+          await getVacancySub(bot, chatId, userId, true, INTERVAL_POLL_SUB_MS);
+        } catch (error) {
+          console.log('sub() | ERROR', error);
         }
-        ctx.telegram.sendChatAction(chatId, 'typing');
-
-        if (!mapUserIdToState[userId].rss) {
-          await ctx.replyWithMarkdown('RSS not found! Please add that with */rss* [link]');
-          console.log('user id', userId, 'not found rss');
-          return;
-        }
-
-        if (mapUserIdToState[userId].isSub) {
-          await ctx.replyWithMarkdown('Вы *уже подписаны*!\nОтписаться можно командой */unsub*');
-          console.log('user id', userId, 'sub fail - yet sub');
-          return;
-        }
-
-        await ctx.replyWithMarkdown(
-          'Вы успешно *подписаны* на уведомления о новых вакансий!\nОтписаться можно командой */unsub*'
-        );
-        console.log('user id', userId, 'sub success');
-        mapUserIdToState[userId].isSub = true;
-
-        const newIntervalId = setInterval(async () => {
-          await getVacancySub(bot, chatId, userId, false, INTERVAL_POLL_SUB_MS);
-        }, INTERVAL_POLL_SUB_MS);
-
-        mapUserIdToState[userId].subIntervalId.push(Number(newIntervalId)); // раз в 5 минуту
-
-        await getVacancySub(bot, chatId, userId, true, INTERVAL_POLL_SUB_MS);
       },
       unsub: async (ctx) => {
         const userId = ctx.update.message.from.id;
