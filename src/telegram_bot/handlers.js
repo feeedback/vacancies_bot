@@ -20,6 +20,7 @@ import {
 } from '../utils/utils.js';
 import { getStringifyVacancies as getStringifyVacanciesHabrCareer } from '../habr_career/api_habr_career.js';
 import { getStringifyVacancies as getStringifyVacanciesHH } from '../headhunter/api_hh.js';
+import { MIN_SALARY_DEFAULT } from '../utils/constant';
 // import { filterNotWord } from '../utils/words.js';
 
 dotenv.config();
@@ -293,7 +294,7 @@ const getVacanciesFromSources = async (
   rssLinks,
   userState,
   source = 'ALL',
-  minSalary = 100_000,
+  minSalary = MIN_SALARY_DEFAULT,
   maxSalary = 1_000_000,
   addFiltersHH = {}
 ) => {

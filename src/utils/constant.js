@@ -1,0 +1,1 @@
+export const MIN_SALARY_DEFAULT = process.env.MIN_SALARY_DEFAULT || 50_000

@@ -8,6 +8,7 @@ import {
 } from './api_habr_career.js';
 import { getCurrencyRates } from '../utils/api_currency.js';
 import { getTopWordsByCountFromVacanciesDataByField } from '../utils/utils.js';
+import { MIN_SALARY_DEFAULT } from '../utils/constant';
 
 const getVacanciesHabrCareer = async (
   url,
@@ -15,7 +16,7 @@ const getVacanciesHabrCareer = async (
   vacancyExcludeTags = vacancyExcludeTagsMy || [],
   vacancyExcludeWordsInDesc = vacancyExcludeWordsInDescMy || [],
   cache,
-  minSalary = 100_000,
+  minSalary = MIN_SALARY_DEFAULT,
   maxSalary = 1_000_000
 ) => {
   const logT = Date.now();
