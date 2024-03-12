@@ -8,7 +8,7 @@ import {
 } from './api_habr_career.js';
 import { getCurrencyRates } from '../utils/api_currency.js';
 import { getTopWordsByCountFromVacanciesDataByField } from '../utils/utils.js';
-import { MIN_SALARY_DEFAULT } from '../utils/constant';
+import { MIN_SALARY_DEFAULT } from '../utils/constant.js';
 
 const getVacanciesHabrCareer = async (
   url,

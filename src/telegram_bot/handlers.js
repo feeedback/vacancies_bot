@@ -20,7 +20,7 @@ import {
 } from '../utils/utils.js';
 import { getStringifyVacancies as getStringifyVacanciesHabrCareer } from '../habr_career/api_habr_career.js';
 import { getStringifyVacancies as getStringifyVacanciesHH } from '../headhunter/api_hh.js';
-import { MIN_SALARY_DEFAULT } from '../utils/constant';
+import { MIN_SALARY_DEFAULT } from '../utils/constant.js';
 // import { filterNotWord } from '../utils/words.js';
 
 dotenv.config();
@@ -436,12 +436,20 @@ const getTopWordsFromDescriptionBySalary = async (ctx) => {
   });
 };
 
-const getVacancy = async (ctx) => {
+const getVacancy = async (ctx, { filterAndHighlight = false } = {}) => {
   const { userState, userId, rssLinks } = await checkUserPreparedForSearchVacancies(ctx);
   if (!userState) return;
 
-  const [dayRaw = 2, sourceRaw = 'ALL'] = ctx.update.message.text.slice(5).trim().split(' ');
+  const [dayRaw = 2, sourceRaw = 'ALL', queryStringRaw = ''] =
+    ctx.update.message.text.slice(filterAndHighlight ? 10 : 5).trim().split(' ');
+
+  let queryString = queryStringRaw.trim()
+
   const source = ['HH', 'HC', 'ALL'].includes(sourceRaw) ? sourceRaw : 'ALL';
+
+  if (filterAndHighlight && !queryString) {
+    queryString = sourceRaw // если нет второго слова, то третье (поисковая строка) это второе по порядку (вместо источника)
+  }
 
   let day = Number(dayRaw);
   // eslint-disable-next-line no-restricted-globals
@@ -458,13 +466,28 @@ const getVacancy = async (ctx) => {
   ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
 
   try {
-    const { vacanciesStr } = await getVacanciesFromSources(
+    const { vacanciesStr: vacanciesStrRaw } = await getVacanciesFromSources(
       day,
       dayUnix,
       rssLinks,
       userState,
       source
     );
+    let vacanciesStr = vacanciesStrRaw
+
+    if (filterAndHighlight && queryString) {
+      const queryStrTrimmed = queryString.toLowerCase().trim()
+
+      const multipleQueryWords = queryStrTrimmed.split(',')
+
+      console.log('[QueryWords] :', multipleQueryWords);
+
+
+      vacanciesStr = vacanciesStr
+        .filter(str => multipleQueryWords.every(queryWord => str.toLowerCase().includes(queryWord)))
+      // .map(str => str.replaceAll(new RegExp(queryString, 'gi'), (origCaseQueryString) => `<u>${origCaseQueryString}</u>`))
+      // подчеркивание через <u> не работает при данном методе отсылки сообщений
+    }
 
     const chunks = chunkTextBlocksBySizeByte(vacanciesStr, 4096);
 
@@ -791,6 +814,13 @@ export const getHandlers = async (
           await getVacancy(ctx);
         } catch (error) {
           console.log('get() | ERROR', error);
+        }
+      },
+      getfilter: async (ctx) => {
+        try {
+          await getVacancy(ctx, { filterAndHighlight: true });
+        } catch (error) {
+          console.log('getfilter() | ERROR', error);
         }
       },
       topwords: async (ctx) => {

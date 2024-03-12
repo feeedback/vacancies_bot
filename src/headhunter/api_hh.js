@@ -257,7 +257,7 @@ const requestVacanciesHeadHunter = async (
     page += 1;
 
     // eslint-disable-next-line no-unused-expressions
-    !isUseCache && (await delayMs(process.env.DELAY_INTERVAL_HH_REQUEST || 10_000));
+    !isUseCache && (await delayMs(process.env.DELAY_INTERVAL_HH_REQUEST || 20_000));
   }
 
   await redisCache.set(

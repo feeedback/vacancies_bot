@@ -3,7 +3,7 @@ import _ from 'lodash';
 import * as myFiltersWords from '../../data/settings/headhunter/hh_words.js';
 import myFilter from '../../data/settings/headhunter/filter.js';
 import requestVacancies from './api_hh.js';
-import { MIN_SALARY_DEFAULT } from '../utils/constant';
+import { MIN_SALARY_DEFAULT } from '../utils/constant.js';
 
 const getVacanciesHeadHunter = async (
   lastRequestTime = dayjs().startOf('day').unix(),

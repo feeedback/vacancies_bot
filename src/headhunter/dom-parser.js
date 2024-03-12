@@ -55,6 +55,7 @@ export const parseVacanciesFromDom = async (data, redisCache) => {
   const rawCount = document.querySelector(`h1[data-qa^=bloko-header]`);
   if (!rawCount || !rawCount.childNodes) {
     console.log(rawCount, document);
+    throw new Error('Битый ответ HTML от HH');
   }
   let vacanciesCount = Number(rawCount.childNodes[0].textContent.replaceAll(/\s/g, ''));
   // eslint-disable-next-line no-restricted-globals

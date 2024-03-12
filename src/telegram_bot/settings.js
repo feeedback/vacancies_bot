@@ -26,6 +26,7 @@ export const commandDescription = [
   { command: '/extags', description: 'Get list your excluded tags' },
   { command: '/exwords', description: 'Get list your excluded words' },
   { command: '/get', description: 'Get new vacancies [from last day]' },
+  { command: '/getfilter', description: 'Get new vacancies and filter [from last day] [query words]' },
   { command: '/sub', description: 'Subscribe to receive new vacancies' },
   { command: '/unsub', description: 'Unsubscribe to receive new vacancies' },
   { command: '/extagsset', description: 'Add tags, vacancies with which will be excluded' },
