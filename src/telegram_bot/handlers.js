@@ -440,15 +440,17 @@ const getVacancy = async (ctx, { filterAndHighlight = false } = {}) => {
   const { userState, userId, rssLinks } = await checkUserPreparedForSearchVacancies(ctx);
   if (!userState) return;
 
-  const [dayRaw = 2, sourceRaw = 'ALL', queryStringRaw = ''] =
-    ctx.update.message.text.slice(filterAndHighlight ? 10 : 5).trim().split(' ');
+  const [dayRaw = 2, sourceRaw = 'ALL', queryStringRaw = ''] = ctx.update.message.text
+    .slice(filterAndHighlight ? 10 : 5)
+    .trim()
+    .split(' ');
 
-  let queryString = queryStringRaw.trim()
+  let queryString = queryStringRaw.trim();
 
   const source = ['HH', 'HC', 'ALL'].includes(sourceRaw) ? sourceRaw : 'ALL';
 
   if (filterAndHighlight && !queryString) {
-    queryString = sourceRaw // если нет второго слова, то третье (поисковая строка) это второе по порядку (вместо источника)
+    queryString = sourceRaw; // если нет второго слова, то третье (поисковая строка) это второе по порядку (вместо источника)
   }
 
   let day = Number(dayRaw);
@@ -473,18 +475,18 @@ const getVacancy = async (ctx, { filterAndHighlight = false } = {}) => {
       userState,
       source
     );
-    let vacanciesStr = vacanciesStrRaw
+    let vacanciesStr = vacanciesStrRaw;
 
     if (filterAndHighlight && queryString) {
-      const queryStrTrimmed = queryString.toLowerCase().trim()
+      const queryStrTrimmed = queryString.toLowerCase().trim();
 
-      const multipleQueryWords = queryStrTrimmed.split(',')
+      const multipleQueryWords = queryStrTrimmed.split(',');
 
       console.log('[QueryWords] :', multipleQueryWords);
 
-
-      vacanciesStr = vacanciesStr
-        .filter(str => multipleQueryWords.every(queryWord => str.toLowerCase().includes(queryWord)))
+      vacanciesStr = vacanciesStr.filter((str) =>
+        multipleQueryWords.every((queryWord) => str.toLowerCase().includes(queryWord))
+      );
       // .map(str => str.replaceAll(new RegExp(queryString, 'gi'), (origCaseQueryString) => `<u>${origCaseQueryString}</u>`))
       // подчеркивание через <u> не работает при данном методе отсылки сообщений
     }
