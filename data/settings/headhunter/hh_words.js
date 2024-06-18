@@ -5,9 +5,10 @@ export const excludeWordTitle = [
   'Стажёр',
   'Стажер',
   'Ученик',
+  'Младший',
   'руководитель',
-  '"Team Lead"',
-  'Тимлид',
+  // '"Team Lead"',
+  // 'Тимлид',
   'Архитектор',
   'CTO',
 
@@ -24,8 +25,8 @@ export const excludeWordTitle = [
   '"Ext.JS"',
 
   // 'Full-stack',
-  'Fullstack',
-  'Full',
+  // 'Fullstack',
+  // 'Full',
 
   // mobile
   'ios',
@@ -35,6 +36,7 @@ export const excludeWordTitle = [
   'Flutter',
 
   // other language
+  '"BPMS"',
   'PERL',
   'Ruby',
   'rails',
@@ -164,7 +166,7 @@ export const excludeWordDesc = [
   '"Qlikview"',
   '"Symfony"',
   '"django"',
-  '"jQuery"',
+  // '"jQuery"',
   // '"PHP"',
 ];
 

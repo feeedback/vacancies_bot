@@ -19,6 +19,7 @@
     "transform": {}
   },
   "dependencies": {
+    "prettier": "^2.2.1",
     "axios": "^0.21.1",
     "currency-formatter": "^1.5.7",
     "dayjs": "^1.10.4",

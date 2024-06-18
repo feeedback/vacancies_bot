@@ -11,7 +11,7 @@ const getVacanciesHeadHunter = async (
   filtersWords = myFiltersWords,
   cache,
   minSalary = MIN_SALARY_DEFAULT,
-  maxSalary = 700_000,
+  maxSalary = 1_000_000,
   addFilters = {}
 ) => {
   const logT = Date.now();
