@@ -120,7 +120,10 @@ export const parseVacanciesFromDom = async (data, redisCache) => {
     const id = idFromLink || idFromButton;
     const link = `${BASE_VACANCY_LINK}/${id}`;
 
-    const salaryStr = getChildTextBySelector(vacancy, SELECTORS_FOR_ELEMENTS.vacancySalary);
+    const salaryStr = getChildTextBySelector(vacancy, SELECTORS_FOR_ELEMENTS.vacancySalary).split(
+      // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar#white_space
+      /\xa0/g // неразрывный пробел
+    )[0];
     if (debug) console.log('salaryStr :>> ', salaryStr);
 
     const scheduleRaw =
@@ -153,7 +156,12 @@ export const parseVacanciesFromDom = async (data, redisCache) => {
     const ago = dayjs.unix(+createdAt).fromNow();
 
     if (!cachedCreatedAt) {
-      await redisCache.set(`HH:vacancyCreatedAt:${hashContent}`, createdAt);
+      await redisCache.set(
+        `HH:vacancyCreatedAt:${hashContent}`,
+        createdAt,
+        'EX',
+        60 * 60 * 24 * 90
+      );
     }
 
     vacanciesDataRaw.push({

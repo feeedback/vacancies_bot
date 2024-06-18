@@ -25,7 +25,7 @@ export default [
   { currency: 'Saudi Arabia Riyal', code: 'SAR', symbol: '﷼' },
   { currency: 'Macedonia Denar', code: 'MKD', symbol: 'ден' },
   { currency: 'Serbia Dinar', code: 'RSD', symbol: 'Дин.' },
-  { currency: 'Kazakhstan Tenge', code: 'KZT', symbol: 'лв' },
+  { currency: 'Kazakhstan Tenge', code: 'KZT', symbol: '₸' },
   { currency: 'Panama Balboa', code: 'PAB', symbol: 'B/.' },
   { currency: 'Belarus Ruble', code: 'BYN', symbol: 'Br' },
   { currency: 'Venezuela Bolívar', code: 'VEF', symbol: 'Bs' },
