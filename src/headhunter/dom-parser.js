@@ -102,7 +102,7 @@ export const parseVacanciesFromDom = async (data, redisCache) => {
     const titleElement = getElTextByAttr(SELECTORS_FOR_ELEMENTS.ATTRIBUTES.vacancyTitle, '', false);
     if (debug) console.log('titleElement :>> ', titleElement);
 
-    const idFromLink = titleElement.parentElement.href.split('?')?.[0]?.split('vacancy/')?.[1];
+    const idFromLink = titleElement.href.split('?')?.[0]?.split('vacancy/')?.[1];
     if (debug) console.log('idFromLink :>> ', idFromLink);
 
     const vacancyButtonApply = getElTextByAttr(
@@ -128,7 +128,8 @@ export const parseVacanciesFromDom = async (data, redisCache) => {
 
     const scheduleRaw =
       // getElTextByAttr('vacancy-serp__vacancy-work-schedule') ||
-      getElTextByAttr(SELECTORS_FOR_ELEMENTS.ATTRIBUTES.vacancyScheduleRemote) || '';
+      // getElTextByAttr(SELECTORS_FOR_ELEMENTS.ATTRIBUTES.vacancyScheduleRemote) || '';
+      getChildTextBySelector(vacancy, SELECTORS_FOR_ELEMENTS.vacancySalary) || '';
     if (debug) console.log('scheduleRaw :>> ', scheduleRaw);
 
     const schedule = ['дома', 'удаленно', 'удалённо'].some((str) =>
