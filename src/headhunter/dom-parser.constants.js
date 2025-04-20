@@ -2,7 +2,8 @@ export const BASE_LINK = 'https://hh.ru';
 export const BASE_VACANCY_LINK = `${BASE_LINK}/vacancy`;
 
 export const SELECTORS_FOR_ELEMENTS = {
-  vacanciesCountHeader: 'h1[data-qa^=bloko-header]',
+  titleHeader: 'h1[data-qa=title]',
+  vacanciesCountOnThisPage: '[data-qa~="vacancy-serp__vacancy"]',
   vacancyBlock: '[data-qa~="vacancy-serp__vacancy"]',
 
   vacancySalary: '[class*="compensation-"]',

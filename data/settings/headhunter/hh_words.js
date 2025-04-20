@@ -149,6 +149,7 @@ export const excludeWordTitle = [
   'Сетевой',
   'WAMP',
   'Creatio',
+  'Creator',
   // 'Haxe*',
   // 'Scientist',
   // 'защищенност*',

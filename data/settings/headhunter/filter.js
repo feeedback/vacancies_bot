@@ -4,7 +4,8 @@ export default {
   // area: '1342', // Тюм. область
   // area: '1', // Москва
   // area: '2', // СПб
-  employment: ['full', 'part', 'probation'],
+  // employment: ['full', 'part', 'probation'],
+  employment_form: ['FULL', 'PART'],
   // experience: ['noExperience'],
   // experience: ['between1And3'],
   // experience: ['between3And6'],

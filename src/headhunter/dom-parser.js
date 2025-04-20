@@ -52,12 +52,21 @@ export const parseSalaryFromTitleHH = (stringTitleVacancy, rates, baseCurrency =
 export const parseVacanciesFromDom = async (data, redisCache) => {
   const document = getDOMDocument(data);
 
-  const rawCount = document.querySelector(SELECTORS_FOR_ELEMENTS.vacanciesCountHeader);
+  const countOnThisPage = document.querySelectorAll(SELECTORS_FOR_ELEMENTS.vacanciesCountOnThisPage)
+    .length;
+
+  const rawCount = document.querySelector(SELECTORS_FOR_ELEMENTS.titleHeader);
   if (!rawCount || !rawCount.childNodes) {
     console.log(rawCount, document);
     throw new Error('Битый ответ HTML от HH');
   }
-  let vacanciesCount = Number(rawCount.childNodes[0].textContent.replaceAll(/\s/g, ''));
+
+  let vacanciesCount = 0;
+  if (countOnThisPage) {
+    vacanciesCount = Number(
+      rawCount?.textContent?.replaceAll(/\s/g, '')?.match(/(?<count>\d+)ваканси/)?.groups?.count
+    );
+  }
   // eslint-disable-next-line no-restricted-globals
   if (isNaN(vacanciesCount)) {
     vacanciesCount = 0;
