@@ -37,7 +37,11 @@ export default [
   { currency: 'Paraguay Guarani', code: 'PYG', symbol: 'Gs' },
   { currency: 'Jamaica Dollar', code: 'JMD', symbol: 'J$' },
   { currency: 'Czech Republic Koruna', code: 'CZK', symbol: 'Kč' },
-  { currency: 'Bosnia and Herzegovina Convertible Mark', code: 'BAM', symbol: 'KM' },
+  {
+    currency: 'Bosnia and Herzegovina Convertible Mark',
+    code: 'BAM',
+    symbol: 'KM',
+  },
   { currency: 'Croatia Kuna', code: 'HRK', symbol: 'kn' },
   { currency: 'Sweden Krona', code: 'SEK', symbol: 'kr' },
   { currency: 'Honduras Lempira', code: 'HNL', symbol: 'L' },

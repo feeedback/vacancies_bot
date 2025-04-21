@@ -1,8 +1,8 @@
-import MY_SETTINGS from '../../data/settings/habr_career/rss_filter.js';
 import vacancyExcludeTagsMy from '../../data/settings/habr_career/exclude_tags.js';
 import vacancyExcludeWordsInDescMy from '../../data/settings/habr_career/exclude_words_title.js';
-import * as HHmyFiltersWords from '../../data/settings/headhunter/hh_words.js';
+import MY_SETTINGS from '../../data/settings/habr_career/rss_filter.js';
 import HHmyFilter from '../../data/settings/headhunter/filter.js';
+import * as HHmyFiltersWords from '../../data/settings/headhunter/hh_words.js';
 
 export const botStartMessage = [
   '*Здравствуйте!* Бот позволяет гибко фильтровать и подписываться на новые вакансии!\n',
@@ -32,17 +32,28 @@ export const commandDescription = [
   },
   { command: '/sub', description: 'Subscribe to receive new vacancies' },
   { command: '/unsub', description: 'Unsubscribe to receive new vacancies' },
-  { command: '/extagsset', description: 'Add tags, vacancies with which will be excluded' },
+  {
+    command: '/extagsset',
+    description: 'Add tags, vacancies with which will be excluded',
+  },
   {
     command: '/extagsadd',
-    description: 'Add new tags with save old, vacancies with which will be excluded',
+    description:
+      'Add new tags with save old, vacancies with which will be excluded',
   },
-  { command: '/exwordsset', description: 'Add words, vacancies with which will be excluded' },
+  {
+    command: '/exwordsset',
+    description: 'Add words, vacancies with which will be excluded',
+  },
   {
     command: '/exwordsadd',
-    description: 'Add new words with save old, vacancies with which will be excluded',
+    description:
+      'Add new words with save old, vacancies with which will be excluded',
   },
-  { command: '/topwords', description: 'Get top words from vacancies description' },
+  {
+    command: '/topwords',
+    description: 'Get top words from vacancies description',
+  },
 ];
 
 export const initStateUsers = {

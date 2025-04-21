@@ -1,14 +1,18 @@
-import jsdom from 'jsdom';
 import dayjs from 'dayjs';
 import dayjsCustomParseFormat from 'dayjs/plugin/customParseFormat.js';
 import dayjsRelativeTime from 'dayjs/plugin/relativeTime.js';
 import dayjsUtc from 'dayjs/plugin/utc.js';
-import { URL } from 'url';
+import jsdom from 'jsdom';
 // import LRU from 'lru-cache';
 import prettier from 'prettier';
-import { getHashByStr } from '../utils/utils.js';
+import { URL } from 'url';
 import { parseSalaryFromTitleRaw } from '../utils/api_currency.js';
-import { BASE_LINK, BASE_VACANCY_LINK, SELECTORS_FOR_ELEMENTS } from './dom-parser.constants.js';
+import { getHashByStr } from '../utils/utils.js';
+import {
+  BASE_LINK,
+  BASE_VACANCY_LINK,
+  SELECTORS_FOR_ELEMENTS,
+} from './dom-parser.constants.js';
 
 // export const cacheHashVacancyCreatedAt = new LRU({
 //   max: 10000,
@@ -20,19 +24,30 @@ dayjs.extend(dayjsRelativeTime);
 dayjs.extend(dayjsUtc);
 const getDOMDocument = (data) => new jsdom.JSDOM(data).window.document;
 
-export const parseSalaryFromTitleHH = (stringTitleVacancy, rates, baseCurrency = 'RUB') => {
+export const parseSalaryFromTitleHH = (
+  stringTitleVacancy,
+  rates,
+  baseCurrency = 'RUB'
+) => {
   // const regExpPatternSalary = /(?:(?:^(?:от)\s*(?:(\d[\s\d]*\d)+))|(?:^(?:до)\s*(?:(\d[\s\d]*\d)+))|(?:^(?:(\d[\s\d]*\d)+)\s[−‐‑-ꟷー一]\s(?:(\d[\s\d]*\d)+)))(?: (.+)$)/i;
-  const regExpPatternSalary = /(?:(?:^(?:от)\s*(?:(\d[\s\d]*\d)+))|(?:^(?:до)\s*(?:(\d[\s\d]*\d)+))|(?:^(?:(\d[\s\d]*\d)+)\s*.?\s*(?:(\d[\s\d]*\d)+)))(?: (.+)$)/i;
+  const regExpPatternSalary =
+    /(?:(?:^(?:от)\s*(?:(\d[\s\d]*\d)+))|(?:^(?:до)\s*(?:(\d[\s\d]*\d)+))|(?:^(?:(\d[\s\d]*\d)+)\s*.?\s*(?:(\d[\s\d]*\d)+)))(?: (.+)$)/i;
   const mapCurrencyStrToSymbol = {
-    'USD': '$',
+    USD: '$',
     'руб.': '₽',
-    '$': '$',
+    $: '$',
     '₽': '₽',
   };
   const salary = stringTitleVacancy.match(regExpPatternSalary);
 
   if (!salary) {
-    return { isSalaryDefine: false, avg: null, avgUSD: null, fork: null, forkUSD: null };
+    return {
+      isSalaryDefine: false,
+      avg: null,
+      avgUSD: null,
+      fork: null,
+      forkUSD: null,
+    };
   }
 
   const [, rawMin, rawMax, rawFrom, rawTo, rawCurrencyStr] = salary;
@@ -40,7 +55,13 @@ export const parseSalaryFromTitleHH = (stringTitleVacancy, rates, baseCurrency =
   const max = rawTo ?? rawMax;
   const rawCurrencySymbol = mapCurrencyStrToSymbol[rawCurrencyStr];
 
-  return parseSalaryFromTitleRaw(baseCurrency, rates, min, max, rawCurrencySymbol);
+  return parseSalaryFromTitleRaw(
+    baseCurrency,
+    rates,
+    min,
+    max,
+    rawCurrencySymbol
+  );
 };
 
 // export const pageVacanciesCount = (data) => {
@@ -52,8 +73,9 @@ export const parseSalaryFromTitleHH = (stringTitleVacancy, rates, baseCurrency =
 export const parseVacanciesFromDom = async (data, redisCache) => {
   const document = getDOMDocument(data);
 
-  const countOnThisPage = document.querySelectorAll(SELECTORS_FOR_ELEMENTS.vacanciesCountOnThisPage)
-    .length;
+  const countOnThisPage = document.querySelectorAll(
+    SELECTORS_FOR_ELEMENTS.vacanciesCountOnThisPage
+  ).length;
 
   const rawCount = document.querySelector(SELECTORS_FOR_ELEMENTS.titleHeader);
   if (!rawCount || !rawCount.childNodes) {
@@ -64,14 +86,18 @@ export const parseVacanciesFromDom = async (data, redisCache) => {
   let vacanciesCount = 0;
   if (countOnThisPage) {
     vacanciesCount = Number(
-      rawCount?.textContent?.replaceAll(/\s/g, '')?.match(/(?<count>\d+)ваканси/)?.groups?.count
+      rawCount?.textContent
+        ?.replaceAll(/\s/g, '')
+        ?.match(/(?<count>\d+)ваканси/)?.groups?.count
     );
   }
   // eslint-disable-next-line no-restricted-globals
   if (isNaN(vacanciesCount)) {
     vacanciesCount = 0;
   }
-  const vacanciesEl = document.querySelectorAll(SELECTORS_FOR_ELEMENTS.vacancyBlock);
+  const vacanciesEl = document.querySelectorAll(
+    SELECTORS_FOR_ELEMENTS.vacancyBlock
+  );
 
   console.log('Получено:', vacanciesEl.length, 'Вакансий — HeadHunter');
 
@@ -80,7 +106,9 @@ export const parseVacanciesFromDom = async (data, redisCache) => {
     return isText ? child?.textContent?.trim() || '' : child;
   };
   const getChildTextByDataAttr = (el, str, addStr = '', isText = true) => {
-    const child = el.querySelector(`[data-qa="${str}"]${addStr ? `${` ${addStr}`}` : ''}`);
+    const child = el.querySelector(
+      `[data-qa="${str}"]${addStr ? `${` ${addStr}`}` : ''}`
+    );
     return isText ? child?.textContent?.trim() || '' : child;
   };
   const debug = false;
@@ -91,27 +119,36 @@ export const parseVacanciesFromDom = async (data, redisCache) => {
     const getElTextByAttr = (attr, ...restArgs) =>
       getChildTextByDataAttr(vacancy, attr, ...restArgs);
 
-    const tasks = getElTextByAttr(SELECTORS_FOR_ELEMENTS.ATTRIBUTES.vacancyTasks).replace(
-      /<\/?highlighttext>/gi,
-      ''
-    );
+    const tasks = getElTextByAttr(
+      SELECTORS_FOR_ELEMENTS.ATTRIBUTES.vacancyTasks
+    ).replace(/<\/?highlighttext>/gi, '');
     if (debug) console.log('tasks :>> ', tasks);
 
-    const skills = getElTextByAttr(SELECTORS_FOR_ELEMENTS.ATTRIBUTES.vacancySkills).replace(
-      /<\/?highlighttext>/gi,
-      ''
-    );
+    const skills = getElTextByAttr(
+      SELECTORS_FOR_ELEMENTS.ATTRIBUTES.vacancySkills
+    ).replace(/<\/?highlighttext>/gi, '');
     if (debug) console.log('skills :>> ', skills);
 
-    const title = getElTextByAttr(SELECTORS_FOR_ELEMENTS.ATTRIBUTES.vacancyTitle);
+    const title = getElTextByAttr(
+      SELECTORS_FOR_ELEMENTS.ATTRIBUTES.vacancyTitle
+    );
     if (debug) console.log('title :>> ', title);
     if (debug && !title)
-      console.log('vacancy', prettier.format(vacancy.innerHTML, { parser: 'html' }));
+      console.log(
+        'vacancy',
+        prettier.format(vacancy.innerHTML, { parser: 'html' })
+      );
 
-    const titleElement = getElTextByAttr(SELECTORS_FOR_ELEMENTS.ATTRIBUTES.vacancyTitle, '', false);
+    const titleElement = getElTextByAttr(
+      SELECTORS_FOR_ELEMENTS.ATTRIBUTES.vacancyTitle,
+      '',
+      false
+    );
     if (debug) console.log('titleElement :>> ', titleElement);
 
-    const idFromLink = titleElement.href.split('?')?.[0]?.split('vacancy/')?.[1];
+    const idFromLink = titleElement.href
+      .split('?')?.[0]
+      ?.split('vacancy/')?.[1];
     if (debug) console.log('idFromLink :>> ', idFromLink);
 
     const vacancyButtonApply = getElTextByAttr(
@@ -121,15 +158,18 @@ export const parseVacanciesFromDom = async (data, redisCache) => {
     );
     if (debug) console.log('vacancyButtonApply :>> ', vacancyButtonApply);
 
-    const idFromButton = new URL(`${BASE_LINK}${vacancyButtonApply?.href}`)?.searchParams?.get(
-      'vacancyId'
-    );
+    const idFromButton = new URL(
+      `${BASE_LINK}${vacancyButtonApply?.href}`
+    )?.searchParams?.get('vacancyId');
     if (debug) console.log('idFromButton :>> ', idFromButton);
 
     const id = idFromLink || idFromButton;
     const link = `${BASE_VACANCY_LINK}/${id}`;
 
-    const salaryStr = getChildTextBySelector(vacancy, SELECTORS_FOR_ELEMENTS.vacancySalary).split(
+    const salaryStr = getChildTextBySelector(
+      vacancy,
+      SELECTORS_FOR_ELEMENTS.vacancySalary
+    ).split(
       // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar#white_space
       /\xa0/g // неразрывный пробел
     )[0];
@@ -138,7 +178,8 @@ export const parseVacanciesFromDom = async (data, redisCache) => {
     const scheduleRaw =
       // getElTextByAttr('vacancy-serp__vacancy-work-schedule') ||
       // getElTextByAttr(SELECTORS_FOR_ELEMENTS.ATTRIBUTES.vacancyScheduleRemote) || '';
-      getChildTextBySelector(vacancy, SELECTORS_FOR_ELEMENTS.vacancySalary) || '';
+      getChildTextBySelector(vacancy, SELECTORS_FOR_ELEMENTS.vacancySalary) ||
+      '';
     if (debug) console.log('scheduleRaw :>> ', scheduleRaw);
 
     const schedule = ['дома', 'удаленно', 'удалённо'].some((str) =>
@@ -146,21 +187,29 @@ export const parseVacanciesFromDom = async (data, redisCache) => {
     );
     if (debug) console.log('schedule :>> ', schedule);
 
-    const company = getElTextByAttr(SELECTORS_FOR_ELEMENTS.ATTRIBUTES.vacancyCompany);
+    const company = getElTextByAttr(
+      SELECTORS_FOR_ELEMENTS.ATTRIBUTES.vacancyCompany
+    );
     if (debug) console.log('company :>> ', company);
 
-    const address = getElTextByAttr(SELECTORS_FOR_ELEMENTS.ATTRIBUTES.vacancyAddress);
+    const address = getElTextByAttr(
+      SELECTORS_FOR_ELEMENTS.ATTRIBUTES.vacancyAddress
+    );
     if (debug) console.log('address :>> ', address);
 
     const city = address.split(',')[0];
     if (debug) console.log('city :>> ', city);
 
-    const content = [title, company, salaryStr, tasks, skills, schedule].join('\n');
+    const content = [title, company, salaryStr, tasks, skills, schedule].join(
+      '\n'
+    );
     const text = [title, company, tasks, skills].join('\n');
 
     const hashContent = getHashByStr(content);
 
-    const cachedCreatedAt = await redisCache.get(`HH:vacancyCreatedAt:${hashContent}`);
+    const cachedCreatedAt = await redisCache.get(
+      `HH:vacancyCreatedAt:${hashContent}`
+    );
 
     const createdAt = cachedCreatedAt ?? dayjs().unix();
     const ago = dayjs.unix(+createdAt).fromNow();

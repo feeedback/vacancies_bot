@@ -1,5 +1,5 @@
-import { URL } from 'url';
 import qs from 'qs';
+import { URL } from 'url';
 
 const filterVacanciesSearch = {
   currency: 'RUR',
@@ -26,7 +26,9 @@ const filterVacanciesSearch3 = {
 const createRssLinkFromFilter = (filter) => {
   const HABR_CAREER_URL_RSS = 'https://career.habr.com/vacancies/rss';
 
-  return new URL(`${HABR_CAREER_URL_RSS}?${qs.stringify(filter, { arrayFormat: 'brackets' })}`);
+  return new URL(
+    `${HABR_CAREER_URL_RSS}?${qs.stringify(filter, { arrayFormat: 'brackets' })}`
+  );
 };
 // console.log(createRssLinkFromFilter(filterVacanciesSearch).toString());
 

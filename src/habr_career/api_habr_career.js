@@ -1,13 +1,13 @@
-import RssParser from 'rss-parser';
-import { URL } from 'url';
-import qs from 'qs';
-import _ from 'lodash';
 import dayjs from 'dayjs';
 import dayjsRelativeTime from 'dayjs/plugin/relativeTime.js';
 // import LRU from 'lru-cache';
 import dotenv from 'dotenv';
-import { delayMs, getHashByStr } from '../utils/utils.js';
+import _ from 'lodash';
+import qs from 'qs';
+import RssParser from 'rss-parser';
+import { URL } from 'url';
 import { parseSalaryFromTitleRaw } from '../utils/api_currency.js';
+import { delayMs, getHashByStr } from '../utils/utils.js';
 
 dotenv.config();
 // export const cache = new LRU({
@@ -69,9 +69,9 @@ export const getVacancyByFilterFromRssHabrCareer = async (
 
     if (feed.items.length) {
       console.log('Получено:', vacancyCount, feed.title);
-      isOlderThanFromDayAgo = dayjs(feed.items[vacancyCount - 1].isoDate).isBefore(
-        dayjs().subtract(fromDayAgo, 'day')
-      );
+      isOlderThanFromDayAgo = dayjs(
+        feed.items[vacancyCount - 1].isoDate
+      ).isBefore(dayjs().subtract(fromDayAgo, 'day'));
       vacancies.push(...feed.items);
       page += 1;
     }
@@ -87,14 +87,18 @@ export const getVacancyByFilterFromRssHabrCareer = async (
       link,
       guid,
     }))
-    .filter(({ isoDate }) => dayjs(isoDate).isAfter(dayjs().subtract(fromDayAgo, 'day')));
+    .filter(({ isoDate }) =>
+      dayjs(isoDate).isAfter(dayjs().subtract(fromDayAgo, 'day'))
+    );
 };
 
 const TAGS_START_TITLE = 'Требуемые навыки: ';
-const regExpPatternContentVacancy = /((?:(?:от)\s+(?:(?:\d[\s\d]*\d)+)\s+[^\s]{1,4}\s*)(?:(?:до)\s*(?:(?:\d[\s\d]*\d)+)\s*[^\s]{1,4})){1}|((?:(?:от)\s+(?:(?:\d[\s\d]*\d)+)\s+[^\s]{1,4}\s*)|(?:(?:до)\s*(?:(?:\d[\s\d]*\d)+)\s*[^\s]{1,4})){1}/i;
+const regExpPatternContentVacancy =
+  /((?:(?:от)\s+(?:(?:\d[\s\d]*\d)+)\s+[^\s]{1,4}\s*)(?:(?:до)\s*(?:(?:\d[\s\d]*\d)+)\s*[^\s]{1,4})){1}|((?:(?:от)\s+(?:(?:\d[\s\d]*\d)+)\s+[^\s]{1,4}\s*)|(?:(?:до)\s*(?:(?:\d[\s\d]*\d)+)\s*[^\s]{1,4})){1}/i;
 
 const parseSalaryFromTitleHabr = (stringTitleVacancy, baseCurrency, rates) => {
-  const regExpPatternSalary = /(?:(от)\s*(?:(\d[\s\d]*\d)+)\s*)?(?:(до)\s*(?:(\d[\s\d]*\d)+)\s*)?(.)\)$/;
+  const regExpPatternSalary =
+    /(?:(от)\s*(?:(\d[\s\d]*\d)+)\s*)?(?:(до)\s*(?:(\d[\s\d]*\d)+)\s*)?(.)\)$/;
 
   const salary = stringTitleVacancy.match(regExpPatternSalary);
   if (!salary) {
@@ -104,7 +108,13 @@ const parseSalaryFromTitleHabr = (stringTitleVacancy, baseCurrency, rates) => {
   if (!rawMin && !rawMax) {
     return null;
   }
-  return parseSalaryFromTitleRaw(baseCurrency, rates, rawMin, rawMax, rawCurrencySymbol);
+  return parseSalaryFromTitleRaw(
+    baseCurrency,
+    rates,
+    rawMin,
+    rawMax,
+    rawCurrencySymbol
+  );
 };
 
 export const parseFilterFormatVacancies = async (
@@ -118,14 +128,28 @@ export const parseFilterFormatVacancies = async (
   minSalary = 0,
   maxSalary = Infinity
 ) => {
-  const vacancyExcludeTagsLC = vacancyExcludeTags.map((tag) => tag.toLowerCase());
-  const vacancyExcludeWordsInDescLC = vacancyExcludeWordsInDesc.map((word) => word.toLowerCase());
+  const vacancyExcludeTagsLC = vacancyExcludeTags.map((tag) =>
+    tag.toLowerCase()
+  );
+  const vacancyExcludeWordsInDescLC = vacancyExcludeWordsInDesc.map((word) =>
+    word.toLowerCase()
+  );
 
   const vacancies = Array.from(vacanciesRaw)
     .filter((vacancy) => vacancy.title)
     .map((vacancy) => {
-      const salaryData = parseSalaryFromTitleHabr(vacancy.title, baseCurrency, rates);
-      let salary = { isSalaryDefine: false, avg: null, avgUSD: null, fork: null, forkUSD: null };
+      const salaryData = parseSalaryFromTitleHabr(
+        vacancy.title,
+        baseCurrency,
+        rates
+      );
+      let salary = {
+        isSalaryDefine: false,
+        avg: null,
+        avgUSD: null,
+        fork: null,
+        forkUSD: null,
+      };
 
       if (salaryData) {
         salary = {
@@ -143,7 +167,10 @@ export const parseFilterFormatVacancies = async (
       // );
 
       const tags = String(vacancy.content)
-        .slice(vacancy.content.indexOf(TAGS_START_TITLE) + TAGS_START_TITLE.length, -1)
+        .slice(
+          vacancy.content.indexOf(TAGS_START_TITLE) + TAGS_START_TITLE.length,
+          -1
+        )
         .split(', ')
         .map((tag) => tag.slice(1));
 
@@ -163,20 +190,25 @@ export const parseFilterFormatVacancies = async (
       };
     });
 
-  const vacanciesFilteredRaw = vacancies.filter(({ tagsLowerCase, titleShort }) => {
-    const wordsTitles = _.words(titleShort.toLowerCase());
+  const vacanciesFilteredRaw = vacancies.filter(
+    ({ tagsLowerCase, titleShort }) => {
+      const wordsTitles = _.words(titleShort.toLowerCase());
 
-    const countBadTag = vacancyExcludeTagsLC.reduce(
-      (sum, badTag) => sum + tagsLowerCase.includes(badTag),
-      0
-    );
-    const countBadWord = vacancyExcludeWordsInDescLC.reduce(
-      (sum, badWord) => sum + wordsTitles.includes(badWord),
-      0
-    );
-    // console.log('countBadTag <= maxCountIncludesBadTag', { countBadTag, maxCountIncludesBadTag });
-    return countBadTag <= maxCountIncludesBadTag && countBadWord <= maxCountIncludesBadWord;
-  });
+      const countBadTag = vacancyExcludeTagsLC.reduce(
+        (sum, badTag) => sum + tagsLowerCase.includes(badTag),
+        0
+      );
+      const countBadWord = vacancyExcludeWordsInDescLC.reduce(
+        (sum, badWord) => sum + wordsTitles.includes(badWord),
+        0
+      );
+      // console.log('countBadTag <= maxCountIncludesBadTag', { countBadTag, maxCountIncludesBadTag });
+      return (
+        countBadTag <= maxCountIncludesBadTag &&
+        countBadWord <= maxCountIncludesBadWord
+      );
+    }
+  );
 
   const vacanciesFiltered = vacanciesFilteredRaw
     .filter(
@@ -204,10 +236,15 @@ export const getStringifyVacancies = (vacanciesFiltered) =>
         .replace(regExpPatternContentVacancy, '')
         .replace(/ Требуемые навыки:.*$/, '');
 
-      const salaryOut = isSalaryDefine ? `${fork} (~${avgUSD} $)` : '_Не указана_';
+      const salaryOut = isSalaryDefine
+        ? `${fork} (~${avgUSD} $)`
+        : '_Не указана_';
 
       const tagsStr = tags.map((tag) => `#${tag}`).join(', ');
-      const linkB = link.split('career.habr').join('*career.habr*').split('://')[1];
+      const linkB = link
+        .split('career.habr')
+        .join('*career.habr*')
+        .split('://')[1];
       const authorR = author.replace(/[_$*]/g, '-');
       const titleShortR = titleShort.replace(/[_$*]/g, '-');
       const contentFormatR = contentFormat.replace(/[_$*]/g, '-');

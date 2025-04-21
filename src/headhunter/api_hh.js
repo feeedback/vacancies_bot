@@ -1,13 +1,17 @@
-import dayjs from 'dayjs';
 import axios from 'axios';
-import qs from 'qs';
+import dayjs from 'dayjs';
+import dotenv from 'dotenv';
 // import LRU from 'lru-cache';
 import _ from 'lodash';
-import dotenv from 'dotenv';
-import { parseVacanciesFromDom, parseSalaryFromTitleHH } from './dom-parser.js';
-import { requestConfig, syntaxSearch as syntax, filterVacanciesSearchBase } from './config.js';
-import { delayMs, getHashByStr } from '../utils/utils.js';
+import qs from 'qs';
 import { getCurrencyRates } from '../utils/api_currency.js';
+import { delayMs, getHashByStr } from '../utils/utils.js';
+import {
+  filterVacanciesSearchBase,
+  requestConfig,
+  syntaxSearch as syntax,
+} from './config.js';
+import { parseSalaryFromTitleHH, parseVacanciesFromDom } from './dom-parser.js';
 
 // export const cache = new LRU({
 //   max: 1000,
@@ -31,11 +35,15 @@ const getStringifyVacancy = ({
   linkByCity = null,
   ago = '',
 }) => {
-  const lastEdit = lastChangeTimeUnix ? `${dayjs.unix(+lastChangeTimeUnix).fromNow()}` : ago;
+  const lastEdit = lastChangeTimeUnix
+    ? `${dayjs.unix(+lastChangeTimeUnix).fromNow()}`
+    : ago;
   const agoStr = publicationTimeUnix
     ? `${dayjs.unix(+publicationTimeUnix).fromNow()} (✍️${lastEdit})`
     : `✍️${lastEdit})`;
-  const salaryOut = salary.isSalaryDefine ? `${salary.fork} (~${salary.avgUSD} $)` : '_Не указана_';
+  const salaryOut = salary.isSalaryDefine
+    ? `${salary.fork} (~${salary.avgUSD} $)`
+    : '_Не указана_';
   const linkB = link.split('hh').join('*hh*').split('://')[1];
   const companyR = company.replace(/[_$*]/g, '-');
   const titleR = title.replace(/[_$*]/g, '-');
@@ -45,8 +53,12 @@ const getStringifyVacancy = ({
 
   const cityWithLinks = !linkByCity
     ? `_${cityR}_`
-    : linkByCity.map(([c, l]) => `[${c.replace(/[_$*]/g, '-')}](${l})`).join('; ');
-  const counts = online ? `✉️${responsesCount} 👀${online}` : `✉️${responsesCount}`;
+    : linkByCity
+        .map(([c, l]) => `[${c.replace(/[_$*]/g, '-')}](${l})`)
+        .join('; ');
+  const counts = online
+    ? `✉️${responsesCount} 👀${online}`
+    : `✉️${responsesCount}`;
   const scheduleR = schedule ? '; _or from_ 🏠' : ''; // 🏠👨‍💻 // ' _Можно удалённо_.'
   // const scheduleR = schedule.replace(/[_$*]/g, '-');
 
@@ -65,7 +77,11 @@ const createFilterSearch = (
   isStartDay,
   addFilters = {}
 ) => {
-  const { excludeWordTitle = [], excludeWordDesc = [], includeWordDesc = [] } = userWords;
+  const {
+    excludeWordTitle = [],
+    excludeWordDesc = [],
+    includeWordDesc = [],
+  } = userWords;
 
   const exTitle = excludeWordTitle.length
     ? syntax.BY_TITLE(syntax.EXCLUDE(syntax.OR(...excludeWordTitle)))
@@ -100,7 +116,13 @@ const formatFilterSort = (
 ) => {
   const vacancies = vacanciesRaw
     .map((vacancy) => {
-      let salary = { isSalaryDefine: false, avg: null, avgUSD: null, fork: null, forkUSD: null };
+      let salary = {
+        isSalaryDefine: false,
+        avg: null,
+        avgUSD: null,
+        fork: null,
+        forkUSD: null,
+      };
 
       if (vacancy.salaryStr) {
         salary = parseSalaryFromTitleHH(vacancy.salaryStr, rates, baseCurrency);
@@ -146,7 +168,13 @@ const requestVacanciesHeadHunter = async (
   // isStartOldDay = lastRequestTime !== dayjs().startOf('day').unix() && dayjs.unix().format('HH:mm:ss') === '00:00:00';
   // можно добавить что когда запрашивается /get 2,3,... то не отображается текущий день, чтобы можно было сохранять в кэш
 
-  const filter = createFilterSearch(userFilter, userWords, lastRequestTime, isStartDay, addFilters);
+  const filter = createFilterSearch(
+    userFilter,
+    userWords,
+    lastRequestTime,
+    isStartDay,
+    addFilters
+  );
   const urlRaw = new URL(
     `${requestConfig.BASE_URL}?${qs.stringify(filter, { arrayFormat: 'repeat' })}`
   );
@@ -156,10 +184,12 @@ const requestVacanciesHeadHunter = async (
   const keyCache = `HH_REQUEST:${getHashByStr(urlRaw.toString())}`;
 
   if (await redisCache.exists(keyCache)) {
-    const cachedVacanciesData = JSON.parse(await redisCache.get(keyCache)).map((vacancy) => ({
-      ...vacancy,
-      ago: dayjs.unix(vacancy.createdAt).fromNow(),
-    }));
+    const cachedVacanciesData = JSON.parse(await redisCache.get(keyCache)).map(
+      (vacancy) => ({
+        ...vacancy,
+        ago: dayjs.unix(vacancy.createdAt).fromNow(),
+      })
+    );
     return {
       vacanciesData: cachedVacanciesData,
     };
@@ -195,7 +225,12 @@ const requestVacanciesHeadHunter = async (
         const res = await axios.get(url, { headers: requestConfig.headers });
         pageData = await parseVacanciesFromDom(res.data, redisCache);
 
-        await redisCache.set(keyCacheByPage, JSON.stringify(pageData), 'EX', 60 * 60);
+        await redisCache.set(
+          keyCacheByPage,
+          JSON.stringify(pageData),
+          'EX',
+          60 * 60
+        );
       }
       const { vacanciesDataRaw, vacanciesCount } = pageData;
 
@@ -205,19 +240,28 @@ const requestVacanciesHeadHunter = async (
       if (await redisCache.exists(keyJSONCacheByPage)) {
         pageJSON = JSON.parse(await redisCache.get(keyJSONCacheByPage));
       } else {
-        const resJSON = await axios.get(urlJSON, { headers: requestConfig.headersJson });
-        pageJSON = resJSON.data.vacancySearchResult.vacancies.map((rawJson) => ({
-          vacancyId: rawJson?.vacancyId,
-          responsesCount: rawJson?.responsesCount || 0, // todo: понять чем различается с totalResponsesCount
-          online_users_count: rawJson?.online_users_count || 0,
-          creationTime: rawJson?.creationTime,
-          publicationTime: rawJson?.publicationTime?.$,
-          publicationTimeUnix: rawJson?.publicationTime?.['@timestamp'],
-          lastChangeTime: rawJson?.lastChangeTime?.$,
-          lastChangeTimeUnix: rawJson?.lastChangeTime?.['@timestamp'],
-        }));
+        const resJSON = await axios.get(urlJSON, {
+          headers: requestConfig.headersJson,
+        });
+        pageJSON = resJSON.data.vacancySearchResult.vacancies.map(
+          (rawJson) => ({
+            vacancyId: rawJson?.vacancyId,
+            responsesCount: rawJson?.responsesCount || 0, // todo: понять чем различается с totalResponsesCount
+            online_users_count: rawJson?.online_users_count || 0,
+            creationTime: rawJson?.creationTime,
+            publicationTime: rawJson?.publicationTime?.$,
+            publicationTimeUnix: rawJson?.publicationTime?.['@timestamp'],
+            lastChangeTime: rawJson?.lastChangeTime?.$,
+            lastChangeTimeUnix: rawJson?.lastChangeTime?.['@timestamp'],
+          })
+        );
 
-        await redisCache.set(keyJSONCacheByPage, JSON.stringify(pageJSON), 'EX', 60 * 60);
+        await redisCache.set(
+          keyJSONCacheByPage,
+          JSON.stringify(pageJSON),
+          'EX',
+          60 * 60
+        );
       }
 
       const mapJsonDataByVacancyId = _.groupBy(pageJSON, 'vacancyId');
@@ -257,7 +301,8 @@ const requestVacanciesHeadHunter = async (
     page += 1;
 
     // eslint-disable-next-line no-unused-expressions
-    !isUseCache && (await delayMs(process.env.DELAY_INTERVAL_HH_REQUEST || 20_000));
+    !isUseCache &&
+      (await delayMs(process.env.DELAY_INTERVAL_HH_REQUEST || 20_000));
   }
 
   await redisCache.set(

@@ -1,8 +1,15 @@
 import { Telegraf } from 'telegraf';
 
-import { getHandlers, mapUserIdToState, redisStore, unsubAll } from './handlers.js'; // unsubAll
+import {
+  getHandlers,
+  mapUserIdToState,
+  redisStore,
+  unsubAll,
+} from './handlers.js'; // unsubAll
 
-const bot = new Telegraf(process.env.TELEGRAM_BOT_API, { handlerTimeout: 60 * 60 * 1_000 }); // 1 час
+const bot = new Telegraf(process.env.TELEGRAM_BOT_API, {
+  handlerTimeout: 60 * 60 * 1_000,
+}); // 1 час
 // const bot = new Telegraf(process.env.TELEGRAM_BOT_API, { handlerTimeout: Number.POSITIVE_INFINITY });
 
 (async () => {

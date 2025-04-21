@@ -1,14 +1,14 @@
 import _ from 'lodash';
 import vacancyExcludeTagsMy from '../../data/settings/habr_career/exclude_tags.js';
 import vacancyExcludeWordsInDescMy from '../../data/settings/habr_career/exclude_words_title.js';
+import { getCurrencyRates } from '../utils/api_currency.js';
+import { MIN_SALARY_DEFAULT } from '../utils/constant.js';
+import { getTopWordsByCountFromVacanciesDataByField } from '../utils/utils.js';
 import {
+  getTopTagsByCount,
   getVacancyByFilterFromRssHabrCareer,
   parseFilterFormatVacancies,
-  getTopTagsByCount,
 } from './api_habr_career.js';
-import { getCurrencyRates } from '../utils/api_currency.js';
-import { getTopWordsByCountFromVacanciesDataByField } from '../utils/utils.js';
-import { MIN_SALARY_DEFAULT } from '../utils/constant.js';
 
 const getVacanciesHabrCareer = async (
   url,
@@ -25,7 +25,9 @@ const getVacanciesHabrCareer = async (
   if (Array.isArray(url)) {
     const rawHabr = [];
     for (const urlOne of url) {
-      rawHabr.push(...(await getVacancyByFilterFromRssHabrCareer(urlOne, cache, day)));
+      rawHabr.push(
+        ...(await getVacancyByFilterFromRssHabrCareer(urlOne, cache, day))
+      );
     }
     vacanciesRaw = _.uniqBy(rawHabr, 'guid');
   } else {
@@ -34,23 +36,27 @@ const getVacanciesHabrCareer = async (
 
   const rates = await getCurrencyRates();
 
-  const { vacanciesFiltered: vacanciesFilteredRaw, vacancies } = await parseFilterFormatVacancies(
-    vacanciesRaw,
-    rates,
-    'RUB',
-    vacancyExcludeTags,
-    vacancyExcludeWordsInDesc,
-    0,
-    0,
-    minSalary,
-    maxSalary
-  );
+  const { vacanciesFiltered: vacanciesFilteredRaw, vacancies } =
+    await parseFilterFormatVacancies(
+      vacanciesRaw,
+      rates,
+      'RUB',
+      vacancyExcludeTags,
+      vacancyExcludeWordsInDesc,
+      0,
+      0,
+      minSalary,
+      maxSalary
+    );
   const vacanciesFiltered = vacanciesFilteredRaw;
 
   const topTagsByCount = getTopTagsByCount(vacancies);
   const topTagsByCountByFiltered = getTopTagsByCount(vacanciesFiltered);
 
-  const topWordsByCount = getTopWordsByCountFromVacanciesDataByField(vacancies, 'titleShort');
+  const topWordsByCount = getTopWordsByCountFromVacanciesDataByField(
+    vacancies,
+    'titleShort'
+  );
   const topWordsByCountByFiltered = getTopWordsByCountFromVacanciesDataByField(
     vacanciesFiltered,
     'titleShort'

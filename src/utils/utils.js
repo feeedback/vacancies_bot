@@ -1,12 +1,14 @@
 /* eslint-disable no-bitwise */
-import _ from 'lodash';
-import { fileURLToPath } from 'url';
-// import qs from 'qs';
-import stringSimilarity from 'string-similarity';
-// import fs from 'fs';
-import path from 'path';
+
+import { setTimeout } from 'node:timers/promises';
 // import crypto from 'crypto';
 import dayjs from 'dayjs';
+import _ from 'lodash';
+// import fs from 'fs';
+import path from 'path';
+// import qs from 'qs';
+import stringSimilarity from 'string-similarity';
+import { fileURLToPath } from 'url';
 import { filterNotWord, reAsciiWord } from './words.js';
 
 const cyrb53 = (key, seed = 0) => {
@@ -40,7 +42,7 @@ const cyrb53 = (key, seed = 0) => {
 
 export const getHashByStr = (key) => cyrb53(key);
 
-export const delayMs = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+export const delayMs = (ms) => setTimeout(ms);
 
 export const getDirname = (url) => path.dirname(fileURLToPath(url)); // import.meta.url
 export const nowMsDate = () => dayjs().format('HH:mm:ss,SSS DD/MM/YYYY');
@@ -89,8 +91,13 @@ export const getStringSimilarity = (str1 = '', str2 = '') =>
 // console.log(getHashByStr('a:1', 'md5').length);
 // console.log(crypto.getHashes());
 
-export const getTopWordsByCountFromVacanciesDataByField = (vacancies, field) => {
-  const wordsVacancies = vacancies.flatMap((v) => _.words(v[field].toLowerCase()));
+export const getTopWordsByCountFromVacanciesDataByField = (
+  vacancies,
+  field
+) => {
+  const wordsVacancies = vacancies.flatMap((v) =>
+    _.words(v[field].toLowerCase())
+  );
 
   const topWordsByCount = Object.fromEntries(
     Object.entries(_.countBy(wordsVacancies)).sort(([, vA], [, vB]) => vB - vA)
@@ -98,7 +105,10 @@ export const getTopWordsByCountFromVacanciesDataByField = (vacancies, field) => 
   return topWordsByCount;
 };
 
-export const getTopWordsByCountFromVacanciesDataByFieldSalary = (vacancies, field) => {
+export const getTopWordsByCountFromVacanciesDataByFieldSalary = (
+  vacancies,
+  field
+) => {
   const salaryAndWords = vacancies.map((v) => [
     v.salary.avgUSD,
     _.words(v[field].toLowerCase(), reAsciiWord),
@@ -107,7 +117,9 @@ export const getTopWordsByCountFromVacanciesDataByFieldSalary = (vacancies, fiel
   const mapWordToSalariesPoints = {};
 
   // теряем частоту слов в одной вакансии, потом допилить
-  const words = vacancies.flatMap((v) => _.words(v[field].toLowerCase(), reAsciiWord));
+  const words = vacancies.flatMap((v) =>
+    _.words(v[field].toLowerCase(), reAsciiWord)
+  );
 
   const topWordsByCount = Object.fromEntries(
     Object.entries(_.countBy(words))
@@ -115,7 +127,9 @@ export const getTopWordsByCountFromVacanciesDataByFieldSalary = (vacancies, fiel
       .filter(([word, count]) => filterNotWord(word) && count >= 3)
   );
 
-  const setNotOnlyOneWords = new Set(Object.entries(topWordsByCount).map(([w]) => w));
+  const setNotOnlyOneWords = new Set(
+    Object.entries(topWordsByCount).map(([w]) => w)
+  );
 
   salaryAndWords.forEach(([avgUSD, wordsByThisVacancy]) =>
     _.uniq(wordsByThisVacancy).forEach((uniqWord) => {

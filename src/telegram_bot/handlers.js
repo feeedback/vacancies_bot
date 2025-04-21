@@ -1,32 +1,39 @@
 /* eslint-disable import/no-mutable-exports */
 /* eslint-disable no-param-reassign */
 /* eslint-disable no-useless-escape */
-import dotenv from 'dotenv';
-import { URL } from 'url';
-import _ from 'lodash';
+
 import dayjs from 'dayjs';
-import { markdownEscapes } from 'markdown-escapes';
-import Redis from 'ioredis';
+import dotenv from 'dotenv';
 import { writeFile } from 'fs/promises';
+import Redis from 'ioredis';
+import _ from 'lodash';
+import { markdownEscapes } from 'markdown-escapes';
+import { URL } from 'url';
+import { getStringifyVacancies as getStringifyVacanciesHabrCareer } from '../habr_career/api_habr_career.js';
 import getVacanciesHabrCareer from '../habr_career/index.js';
+import { getStringifyVacancies as getStringifyVacanciesHH } from '../headhunter/api_hh.js';
 import getVacanciesHeadHunter from '../headhunter/index.js';
-import { botStartMessage, commandDescription, initStateUsers } from './settings.js';
+import { MIN_SALARY_DEFAULT } from '../utils/constant.js';
 import {
-  nowMsDate,
   chunkTextBlocksBySizeByte,
   delayMs,
   // getTopWordsByCountFromVacanciesDataByField,
   getTopWordsByCountFromVacanciesDataByFieldSalary,
+  nowMsDate,
 } from '../utils/utils.js';
-import { getStringifyVacancies as getStringifyVacanciesHabrCareer } from '../habr_career/api_habr_career.js';
-import { getStringifyVacancies as getStringifyVacanciesHH } from '../headhunter/api_hh.js';
-import { MIN_SALARY_DEFAULT } from '../utils/constant.js';
+import {
+  botStartMessage,
+  commandDescription,
+  initStateUsers,
+} from './settings.js';
+
 // import { filterNotWord } from '../utils/words.js';
 
 dotenv.config();
 
 // const INTERVAL_POLL_SUB_MS = 1000 * 60 * 10;
-const INTERVAL_POLL_SUB_MS = (process.env.INTERVAL_POLL_SUB_MINUTE || 10) * 60 * 1000;
+const INTERVAL_POLL_SUB_MS =
+  (process.env.INTERVAL_POLL_SUB_MINUTE || 10) * 60 * 1000;
 console.log('INTERVAL_POLL_SUB_MS', INTERVAL_POLL_SUB_MS / 1000 / 60);
 
 export const redisStore = new Redis({
@@ -55,8 +62,10 @@ const startingUserState = (userId) => {
   mapUserIdToState[userId].excludeWords = userState.excludeWords ?? [];
   mapUserIdToState[userId].subIntervalId = userState.subIntervalId ?? [];
   mapUserIdToState[userId].hashes = userState.hashes ?? [];
-  mapUserIdToState[userId].pollOptionsExTags = userState.pollOptionsExTags ?? {};
-  mapUserIdToState[userId].pollOptionsExWords = userState.pollOptionsExWords ?? {};
+  mapUserIdToState[userId].pollOptionsExTags =
+    userState.pollOptionsExTags ?? {};
+  mapUserIdToState[userId].pollOptionsExWords =
+    userState.pollOptionsExWords ?? {};
 
   mapUserIdToState[userId].HH = userState.HH ?? {};
   userState.HH = userState.HH ?? {};
@@ -91,9 +100,12 @@ const setRss = async (ctx, rss) => {
 
   console.log(rss, isValidURL);
   if (!isValidURL) {
-    ctx.reply('Invalid RSS url, need starts with "https://career.habr.com/vacancies/rss"', {
-      disable_web_page_preview: true,
-    });
+    ctx.reply(
+      'Invalid RSS url, need starts with "https://career.habr.com/vacancies/rss"',
+      {
+        disable_web_page_preview: true,
+      }
+    );
     return;
   }
 
@@ -110,7 +122,9 @@ const setExcludeTags = async (ctx, isSaveOld = false) => {
     startingUserState(userId);
   }
   if (!mapUserIdToState[userId].rss) {
-    await ctx.replyWithMarkdown('Для начала установите RSS ссылку, командой */rss*');
+    await ctx.replyWithMarkdown(
+      'Для начала установите RSS ссылку, командой */rss*'
+    );
     return;
   }
 
@@ -122,16 +136,19 @@ const setExcludeTags = async (ctx, isSaveOld = false) => {
     '_Потом вы можете посмотреть список добавленных искл. тегов командой_ */extags*'
   );
   await ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
-  const { topTagsByCount, topTagsByCountByFiltered } = await getVacanciesHabrCareer(
-    mapUserIdToState[userId].rss,
-    20,
-    mapUserIdToState[userId].excludeTags,
-    mapUserIdToState[userId].excludeWords,
-    redisStore
-  );
+  const { topTagsByCount, topTagsByCountByFiltered } =
+    await getVacanciesHabrCareer(
+      mapUserIdToState[userId].rss,
+      20,
+      mapUserIdToState[userId].excludeTags,
+      mapUserIdToState[userId].excludeWords,
+      redisStore
+    );
   // await ctx.poll([topTagsByCount]);
   // await ctx.telegram.sendPoll(ctx.chatId: string | number, question: string, options: topTagsByCount, extra ?: ExtraPoll)
-  const topTags = Object.entries(isSaveOld ? topTagsByCountByFiltered : topTagsByCount)
+  const topTags = Object.entries(
+    isSaveOld ? topTagsByCountByFiltered : topTagsByCount
+  )
     .filter(([, count]) => count >= 2)
     .map(([tag]) => tag);
 
@@ -161,7 +178,9 @@ const setExcludeTags = async (ctx, isSaveOld = false) => {
 const setExcludeWords = async (ctx, isSaveOld = false) => {
   const userId = ctx.update.message.from.id;
   if (!mapUserIdToState[userId].rss) {
-    await ctx.replyWithMarkdown('Для начала установите RSS ссылку, командой */rss*');
+    await ctx.replyWithMarkdown(
+      'Для начала установите RSS ссылку, командой */rss*'
+    );
     return;
   }
 
@@ -173,16 +192,19 @@ const setExcludeWords = async (ctx, isSaveOld = false) => {
     '_Потом вы можете посмотреть список добавленных искл. слов командой_ */exwords*'
   );
   await ctx.telegram.sendChatAction(ctx.message.chat.id, 'typing');
-  const { topWordsByCount, topWordsByCountByFiltered } = await getVacanciesHabrCareer(
-    mapUserIdToState[userId].rss,
-    20,
-    mapUserIdToState[userId].excludeTags,
-    mapUserIdToState[userId].excludeWords,
-    redisStore
-  );
+  const { topWordsByCount, topWordsByCountByFiltered } =
+    await getVacanciesHabrCareer(
+      mapUserIdToState[userId].rss,
+      20,
+      mapUserIdToState[userId].excludeTags,
+      mapUserIdToState[userId].excludeWords,
+      redisStore
+    );
   // await ctx.poll([topTagsByCount]);
   // await ctx.telegram.sendPoll(ctx.chatId: string | number, question: string, options: topTagsByCount, extra ?: ExtraPoll)
-  const topWords = Object.entries(isSaveOld ? topWordsByCountByFiltered : topWordsByCount)
+  const topWords = Object.entries(
+    isSaveOld ? topWordsByCountByFiltered : topWordsByCount
+  )
     .filter(([, count]) => count >= 1)
     .map(([word]) => word);
 
@@ -233,9 +255,15 @@ const checkUserPreparedForSearchVacancies = async (
   try {
     if (!rss) {
       if (!ctx) {
-        await sendMD(bot, chatId, 'RSS not found! Please add that with */rss* [link]');
+        await sendMD(
+          bot,
+          chatId,
+          'RSS not found! Please add that with */rss* [link]'
+        );
       } else {
-        await ctx.replyWithMarkdown('RSS not found! Please add that with */rss* [link]');
+        await ctx.replyWithMarkdown(
+          'RSS not found! Please add that with */rss* [link]'
+        );
       }
       console.log('user id', userId, 'not found rss');
 
@@ -263,7 +291,10 @@ const checkUserPreparedForSearchVacancies = async (
       console.log(error.response);
 
       delete mapUserIdToState[userId];
-      await redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
+      await redisStore.set(
+        'mapUserIdToState',
+        JSON.stringify(mapUserIdToState)
+      );
     }
   }
 
@@ -271,8 +302,12 @@ const checkUserPreparedForSearchVacancies = async (
 };
 
 const stringifyVacancies = (vacancies) => [
-  ...getStringifyVacanciesHabrCareer(vacancies.filter((v) => v.source === 'HABR_CAREER')),
-  ...getStringifyVacanciesHH(vacancies.filter((v) => v.source === 'HEADHUNTER')),
+  ...getStringifyVacanciesHabrCareer(
+    vacancies.filter((v) => v.source === 'HABR_CAREER')
+  ),
+  ...getStringifyVacanciesHH(
+    vacancies.filter((v) => v.source === 'HEADHUNTER')
+  ),
 ];
 
 const filterOnlyNewVacancies = async (allVacancies, hashes, existHashes) => {
@@ -344,7 +379,13 @@ const getVacanciesFromSources = async (
 
   const hashes = [...hashesHC, ...hashesHH];
 
-  return { vacanciesFilteredHC, vacanciesFilteredHH, vacancies, vacanciesStr, hashes };
+  return {
+    vacanciesFilteredHC,
+    vacanciesFilteredHH,
+    vacancies,
+    vacanciesStr,
+    hashes,
+  };
 };
 
 const getTopWordsFromDescriptionBySalary = async (ctx) => {
@@ -354,7 +395,9 @@ const getTopWordsFromDescriptionBySalary = async (ctx) => {
 
   rssLinks = rssLinks.map((rss) => `${rss}&with_salary=1`);
 
-  const [, dayRaw = 2, sourceRaw = 'ALL'] = ctx.update.message.text.trim().split(' ');
+  const [, dayRaw = 2, sourceRaw = 'ALL'] = ctx.update.message.text
+    .trim()
+    .split(' ');
   const source = ['HH', 'HC', 'ALL'].includes(sourceRaw) ? sourceRaw : 'ALL';
 
   let day = Number(dayRaw);
@@ -366,7 +409,10 @@ const getTopWordsFromDescriptionBySalary = async (ctx) => {
     .startOf('day')
     .subtract(day - 1, 'day')
     .unix();
-  console.log('\n', nowMsDate(), getTopWordsFromDescriptionBySalary, { day, source });
+  console.log('\n', nowMsDate(), getTopWordsFromDescriptionBySalary, {
+    day,
+    source,
+  });
 
   // const { vacanciesFilteredHC, vacanciesFilteredHH } = await getVacanciesFromSources(
   const { vacanciesFilteredHH } = await getVacanciesFromSources(
@@ -397,7 +443,10 @@ const getTopWordsFromDescriptionBySalary = async (ctx) => {
   const {
     mapWordToSalariesPoints: mapWordToSalariesPointsHH,
     topWordsByCount: topWordsByCountByFilteredHH,
-  } = getTopWordsByCountFromVacanciesDataByFieldSalary(vacanciesFilteredHH, 'text');
+  } = getTopWordsByCountFromVacanciesDataByFieldSalary(
+    vacanciesFilteredHH,
+    'text'
+  );
   // const topWordsHH = Object.entries(topWordsByCountByFilteredHH)
   //   .filter(([word, count]) => word.length >= 2 && count >= 3)
   //   .filter(([word]) => filterNotWord(word))
@@ -431,19 +480,25 @@ const getTopWordsFromDescriptionBySalary = async (ctx) => {
 
   console.log('HH stat by count vacancy:', vacanciesFilteredHH.length);
 
-  await writeFile(`word-by-salary_by_N${vacanciesFilteredHH.length}.csv`, data, {
-    encoding: 'utf-8',
-  });
+  await writeFile(
+    `word-by-salary_by_N${vacanciesFilteredHH.length}.csv`,
+    data,
+    {
+      encoding: 'utf-8',
+    }
+  );
 };
 
 const getVacancy = async (ctx, { filterAndHighlight = false } = {}) => {
-  const { userState, userId, rssLinks } = await checkUserPreparedForSearchVacancies(ctx);
+  const { userState, userId, rssLinks } =
+    await checkUserPreparedForSearchVacancies(ctx);
   if (!userState) return;
 
-  const [dayRaw = 2, sourceRaw = 'ALL', queryStringRaw = ''] = ctx.update.message.text
-    .slice(filterAndHighlight ? 10 : 5)
-    .trim()
-    .split(' ');
+  const [dayRaw = 2, sourceRaw = 'ALL', queryStringRaw = ''] =
+    ctx.update.message.text
+      .slice(filterAndHighlight ? 10 : 5)
+      .trim()
+      .split(' ');
 
   let queryString = queryStringRaw.trim();
 
@@ -485,7 +540,9 @@ const getVacancy = async (ctx, { filterAndHighlight = false } = {}) => {
       console.log('[QueryWords] :', multipleQueryWords);
 
       vacanciesStr = vacanciesStr.filter((str) =>
-        multipleQueryWords.every((queryWord) => str.toLowerCase().includes(queryWord))
+        multipleQueryWords.every((queryWord) =>
+          str.toLowerCase().includes(queryWord)
+        )
       );
       // .map(str => str.replaceAll(new RegExp(queryString, 'gi'), (origCaseQueryString) => `<u>${origCaseQueryString}</u>`))
       // подчеркивание через <u> не работает при данном методе отсылки сообщений
@@ -515,14 +572,23 @@ const getVacancy = async (ctx, { filterAndHighlight = false } = {}) => {
     if (error.response && error.response.statusCode === 403) {
       console.log(error.response);
       delete mapUserIdToState[userId];
-      await redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
+      await redisStore.set(
+        'mapUserIdToState',
+        JSON.stringify(mapUserIdToState)
+      );
     }
   }
   // const tempMessageId = ctx.message.message_id + 1;
   // ctx.deleteMessage(tempMessageId);
 };
 
-const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPingMs) => {
+const getVacancySub = async (
+  bot,
+  chatId,
+  userId,
+  isFirstSub = false,
+  intervalPingMs
+) => {
   console.log('\n', nowMsDate(), getVacancySub);
 
   const { userState, rssLinks } = await checkUserPreparedForSearchVacancies(
@@ -534,9 +600,10 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
   if (!userState) return;
 
   const day = isFirstSub ? 7 : 3;
-  const dayUnix = (isFirstSub
-    ? dayjs().subtract(7, 'day')
-    : dayjs().subtract(intervalPingMs + 5000, 'ms')
+  const dayUnix = (
+    isFirstSub
+      ? dayjs().subtract(7, 'day')
+      : dayjs().subtract(intervalPingMs + 5000, 'ms')
   ).unix();
 
   try {
@@ -574,13 +641,20 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
     }
     await bot.telegram.sendChatAction(chatId, 'typing');
 
-    for (const messageChunk of chunkTextBlocksBySizeByte(newVacanciesStr, 4096)) {
-      await bot.telegram.sendMessage(chatId, messageChunk.join('\n\n').replace('`', ''), {
-        disable_web_page_preview: true,
-        parse_mode: 'Markdown',
-        // disable_notification: true,
-        // webhookReply: false,
-      });
+    for (const messageChunk of chunkTextBlocksBySizeByte(
+      newVacanciesStr,
+      4096
+    )) {
+      await bot.telegram.sendMessage(
+        chatId,
+        messageChunk.join('\n\n').replace('`', ''),
+        {
+          disable_web_page_preview: true,
+          parse_mode: 'Markdown',
+          // disable_notification: true,
+          // webhookReply: false,
+        }
+      );
     }
     bot.telegram.webhookReply = true;
   } catch (error) {
@@ -589,7 +663,10 @@ const getVacancySub = async (bot, chatId, userId, isFirstSub = false, intervalPi
     if (error.response && error.response.statusCode === 403) {
       console.log(error.response);
       delete mapUserIdToState[userId];
-      await redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
+      await redisStore.set(
+        'mapUserIdToState',
+        JSON.stringify(mapUserIdToState)
+      );
     }
   }
 
@@ -633,10 +710,15 @@ export const getHandlers = async (
             const timeLastPollSub = await redisStore.get(`sub|${userId}`);
             let lastTimeDiff = INTERVAL_POLL_SUB_MS;
 
-            console.log('Последний запуск был', dayjs.unix(timeLastPollSub).fromNow());
+            console.log(
+              'Последний запуск был',
+              dayjs.unix(timeLastPollSub).fromNow()
+            );
 
             if (timeLastPollSub) {
-              if (dayjs.unix(timeLastPollSub).isBefore(dayjs().subtract(3, 'day'))) {
+              if (
+                dayjs.unix(timeLastPollSub).isBefore(dayjs().subtract(3, 'day'))
+              ) {
                 console.log(
                   'Последний запрос вакансий (запуск программы и getVacancySub) было позже 3 дней назад, выводятся только новые вакансии с этого момента'
                 );
@@ -650,7 +732,13 @@ export const getHandlers = async (
             // setTimeout(async () => {
 
             const newIntervalId = setInterval(async () => {
-              await getVacancySub(bot, +userId, +userId, false, INTERVAL_POLL_SUB_MS);
+              await getVacancySub(
+                bot,
+                +userId,
+                +userId,
+                false,
+                INTERVAL_POLL_SUB_MS
+              );
             }, INTERVAL_POLL_SUB_MS);
 
             userState.subIntervalId.push(Number(newIntervalId)); // раз в 5 минуту
@@ -670,7 +758,11 @@ export const getHandlers = async (
       async (ctx, next) => {
         const d = Date.now();
         try {
-          console.log('\n', nowMsDate(), `[COMMAND] ${ctx?.update?.message?.text?.trim()}`);
+          console.log(
+            '\n',
+            nowMsDate(),
+            `[COMMAND] ${ctx?.update?.message?.text?.trim()}`
+          );
 
           await next(); // runs next middleware
         } catch (error) {
@@ -694,7 +786,10 @@ export const getHandlers = async (
         if (error.response && error.response.statusCode === 403) {
           console.log(error.response);
           delete mapUserIdToState[userId];
-          await redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
+          await redisStore.set(
+            'mapUserIdToState',
+            JSON.stringify(mapUserIdToState)
+          );
         }
       }
     },
@@ -709,7 +804,10 @@ export const getHandlers = async (
         if (error.response && error.response.statusCode === 403) {
           console.log(error.response);
           delete mapUserIdToState[userId];
-          await redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
+          await redisStore.set(
+            'mapUserIdToState',
+            JSON.stringify(mapUserIdToState)
+          );
         }
       }
     },
@@ -730,7 +828,10 @@ export const getHandlers = async (
         if (error.response && error.response.statusCode === 403) {
           console.log(error.response);
           delete mapUserIdToState[userId];
-          await redisStore.set('mapUserIdToState', JSON.stringify(mapUserIdToState));
+          await redisStore.set(
+            'mapUserIdToState',
+            JSON.stringify(mapUserIdToState)
+          );
         }
       }
     },
@@ -826,7 +927,9 @@ export const getHandlers = async (
         }
       },
       topwords: async (ctx) => {
-        getTopWordsFromDescriptionBySalary(ctx).catch((err) => console.log(err));
+        getTopWordsFromDescriptionBySalary(ctx).catch((err) =>
+          console.log(err)
+        );
       },
       sub: async (ctx) => {
         try {
@@ -838,13 +941,17 @@ export const getHandlers = async (
           ctx.telegram.sendChatAction(chatId, 'typing');
 
           if (!mapUserIdToState[userId].rss) {
-            await ctx.replyWithMarkdown('RSS not found! Please add that with */rss* [link]');
+            await ctx.replyWithMarkdown(
+              'RSS not found! Please add that with */rss* [link]'
+            );
             console.log('user id', userId, 'not found rss');
             return;
           }
 
           if (mapUserIdToState[userId].isSub) {
-            await ctx.replyWithMarkdown('Вы *уже подписаны*!\nОтписаться можно командой */unsub*');
+            await ctx.replyWithMarkdown(
+              'Вы *уже подписаны*!\nОтписаться можно командой */unsub*'
+            );
             console.log('user id', userId, 'sub fail - yet sub');
             return;
           }
@@ -856,7 +963,13 @@ export const getHandlers = async (
           mapUserIdToState[userId].isSub = true;
 
           const newIntervalId = setInterval(async () => {
-            await getVacancySub(bot, chatId, userId, false, INTERVAL_POLL_SUB_MS);
+            await getVacancySub(
+              bot,
+              chatId,
+              userId,
+              false,
+              INTERVAL_POLL_SUB_MS
+            );
           }, INTERVAL_POLL_SUB_MS);
 
           mapUserIdToState[userId].subIntervalId.push(Number(newIntervalId)); // раз в 5 минуту
@@ -872,7 +985,9 @@ export const getHandlers = async (
           startingUserState(userId);
         }
         if (!mapUserIdToState[userId].isSub) {
-          await ctx.replyWithMarkdown('Вы не подписаны!\nПодписаться можно командой */sub*');
+          await ctx.replyWithMarkdown(
+            'Вы не подписаны!\nПодписаться можно командой */sub*'
+          );
           console.log('user id', userId, 'not found sub id');
           return;
         }
@@ -914,25 +1029,33 @@ export const getHandlers = async (
 
         if (mapUserIdToState[userId].pollOptionsExTags[poll.poll_id]) {
           const excludeTags = poll.option_ids.map(
-            (index) => mapUserIdToState[userId].pollOptionsExTags[poll.poll_id][index]
+            (index) =>
+              mapUserIdToState[userId].pollOptionsExTags[poll.poll_id][index]
           );
           mapUserIdToState[userId].excludeTags = [
             ...mapUserIdToState[userId].excludeTags,
             ...excludeTags,
           ];
-          console.log('excludeTags updated', mapUserIdToState[userId].excludeTags);
+          console.log(
+            'excludeTags updated',
+            mapUserIdToState[userId].excludeTags
+          );
           return;
         }
 
         if (mapUserIdToState[userId].pollOptionsExWords[poll.poll_id]) {
           const excludeWords = poll.option_ids.map(
-            (index) => mapUserIdToState[userId].pollOptionsExWords[poll.poll_id][index]
+            (index) =>
+              mapUserIdToState[userId].pollOptionsExWords[poll.poll_id][index]
           );
           mapUserIdToState[userId].excludeWords = [
             ...mapUserIdToState[userId].excludeWords,
             ...excludeWords,
           ];
-          console.log('excludeWords updated', mapUserIdToState[userId].excludeWords);
+          console.log(
+            'excludeWords updated',
+            mapUserIdToState[userId].excludeWords
+          );
         }
       },
     },

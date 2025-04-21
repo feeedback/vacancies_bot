@@ -1,7 +1,7 @@
 import axios from 'axios';
 import currencyFormatter from 'currency-formatter';
-import Redis from 'ioredis';
 import dotenv from 'dotenv';
+import Redis from 'ioredis';
 import currencySymbols from './currency_symbols.js';
 
 dotenv.config();
@@ -43,7 +43,12 @@ export const getCurrencyRates = async (isTest = false) => {
       if (!ratesNew) {
         console.log('error getCurrencyRates data null', res.data);
       } else {
-        await redisStore.set('rates:rates', JSON.stringify(ratesNew), 'EX', 60 * 60 * 24); // 1 day
+        await redisStore.set(
+          'rates:rates',
+          JSON.stringify(ratesNew),
+          'EX',
+          60 * 60 * 24
+        ); // 1 day
         rates = ratesNew;
       }
     }
@@ -58,10 +63,10 @@ export const getCurrencyRates = async (isTest = false) => {
 
 export const convertCurrencyToBase = (rates, base = 'RUB') => {
   const baseRate = rates[base];
-  const rateByBase = Object.entries(rates).reduce(
-    (acc, [currency, rate]) => ({ ...acc, [currency]: baseRate / rate }),
-    {}
-  );
+  const rateByBase = Object.entries(rates).reduce((acc, [currency, rate]) => {
+    acc[currency] = baseRate / rate;
+    return acc;
+  }, {});
 
   return rateByBase;
 };
@@ -75,7 +80,13 @@ export const convertCurrency = (numberPrice, rates, fromCode, toCode) => {
   return Math.floor(numberPrice * rate);
 };
 
-export const parseSalaryFromTitleRaw = (baseCurrency, rates, rawMin, rawMax, rawCurrencySymbol) => {
+export const parseSalaryFromTitleRaw = (
+  baseCurrency,
+  rates,
+  rawMin,
+  rawMax,
+  rawCurrencySymbol
+) => {
   const USD = 'USD';
   const baseCurrencySymbol = mapCurrencyCodeToSymbol[baseCurrency];
   const currencySymbol = String(rawCurrencySymbol).trim();
@@ -103,9 +114,17 @@ export const parseSalaryFromTitleRaw = (baseCurrency, rates, rawMin, rawMax, raw
   const minF = `${Math.floor(min / 1000)}k`;
   const maxF = `${Math.floor(max / 1000)}k`;
   // eslint-disable-next-line no-nested-ternary
-  const strFork = isExistFork ? `${minF}–${maxF}` : rawMin ? `>${minF}` : `<${maxF}`;
+  const strFork = isExistFork
+    ? `${minF}–${maxF}`
+    : rawMin
+      ? `>${minF}`
+      : `<${maxF}`;
   // eslint-disable-next-line no-nested-ternary
-  const strForkUSD = isExistFork ? `${minUSD}–${maxUSD}` : rawMin ? `>${minUSD}` : `<${maxUSD}`;
+  const strForkUSD = isExistFork
+    ? `${minUSD}–${maxUSD}`
+    : rawMin
+      ? `>${minUSD}`
+      : `<${maxUSD}`;
   // eslint-disable-next-line no-nested-ternary
   const avg = !isExistFork
     ? max

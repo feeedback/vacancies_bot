@@ -1,9 +1,9 @@
 import dayjs from 'dayjs';
 import _ from 'lodash';
-import * as myFiltersWords from '../../data/settings/headhunter/hh_words.js';
 import myFilter from '../../data/settings/headhunter/filter.js';
-import requestVacancies from './api_hh.js';
+import * as myFiltersWords from '../../data/settings/headhunter/hh_words.js';
 import { MIN_SALARY_DEFAULT } from '../utils/constant.js';
+import requestVacancies from './api_hh.js';
 
 const getVacanciesHeadHunter = async (
   lastRequestTime = dayjs().startOf('day').unix(),
@@ -26,7 +26,9 @@ const getVacanciesHeadHunter = async (
   );
 
   // const vacanciesFiltered = _.uniqBy(vacanciesFilteredRaw, 'hashContent');
-  const vacanciesFiltered = Object.values(_.groupBy(vacanciesFilteredRaw, 'hashContent'))
+  const vacanciesFiltered = Object.values(
+    _.groupBy(vacanciesFilteredRaw, 'hashContent')
+  )
     .map((vacancyArr) => {
       const baseVacancy = vacancyArr[0];
       // объединяем одинаковые вакансии в разных городах, выводим как одну вакансию со списком городов через ;
@@ -54,7 +56,8 @@ const getVacanciesHeadHunter = async (
     )
     .filter(
       ({ salary: { avgUSD = 0 } }) =>
-        !addFilters['only_with_salary'] || (avgUSD && avgUSD >= minSalary && avgUSD <= maxSalary)
+        !addFilters['only_with_salary'] ||
+        (avgUSD && avgUSD >= minSalary && avgUSD <= maxSalary)
     );
   // .filter(({ salary: { avgUSD } }) => avgUSD > 0);
   const hashes = vacanciesFiltered.map(({ hashContent }) => hashContent);
