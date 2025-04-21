@@ -22,4 +22,4 @@ jobs:
         env:
           CI: true
       - name: Run biomejs linter
-        run: npm run lint
+        run: npm run lint:ci

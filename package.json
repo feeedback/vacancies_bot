@@ -9,7 +9,8 @@
     "telegramServe": "nodemon ./src/telegram_bot/index.js",
     "telegramBotPM2": "pm2 start ./src/telegram_bot/index.js",
     "lint": "biome check",
-    "lint:fix": "biome check --fix"
+    "lint:fix": "biome check --fix",
+    "lint:ci": "biome check --no-errors-on-unmatched --files-ignore-unknown=true --colors=off"
   },
   "author": "Aleksandr Rzhanitsyn",
   "engines": {
