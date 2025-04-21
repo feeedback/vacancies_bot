@@ -7,7 +7,9 @@
     "test": "npx jest --passWithNoTests",
     "run": "node ./src/telegram_bot/index.js",
     "telegramServe": "nodemon ./src/telegram_bot/index.js",
-    "telegramBotPM2": "pm2 start ./src/telegram_bot/index.js"
+    "telegramBotPM2": "pm2 start ./src/telegram_bot/index.js",
+    "lint": "biome check",
+    "lint:fix": "biome check --fix"
   },
   "author": "Aleksandr Rzhanitsyn",
   "engines": {
