@@ -49,8 +49,9 @@ export const nowMsDate = () => dayjs().format('HH:mm:ss,SSS DD/MM/YYYY');
 export const nowMs = () => dayjs().format('HH:mm:ss,SSS');
 
 export const chunkTextBlocksBySizeByte = (textBlocks, maxSize = 4096) => {
+  const mutatedTextBlocks = [...textBlocks];
   let size = 0;
-  let tailBlocks = textBlocks.length;
+  let tailBlocks = mutatedTextBlocks.length;
   const chunked = [];
   let index = 0;
 
@@ -58,7 +59,7 @@ export const chunkTextBlocksBySizeByte = (textBlocks, maxSize = 4096) => {
     chunked[index] = [];
 
     while (size < maxSize && tailBlocks) {
-      const blockText = textBlocks.shift();
+      const blockText = mutatedTextBlocks.shift();
       tailBlocks -= 1;
 
       if (blockText) {
@@ -70,7 +71,7 @@ export const chunkTextBlocksBySizeByte = (textBlocks, maxSize = 4096) => {
         size += blockSize;
 
         if (size > maxSize) {
-          textBlocks.unshift(blockText);
+          mutatedTextBlocks.unshift(blockText);
           tailBlocks += 1;
         } else {
           chunked[index].push(blockText);
